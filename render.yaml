@@ -1,0 +1,24 @@
+# Render Blueprint — one-click deploy of the PowerHouse Gym Owner App.
+# In Render: New + → Blueprint → connect this GitHub repo → Apply.
+services:
+  - type: web
+    name: powerhouse-gym
+    env: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      # Render generates a strong random SECRET_KEY for you.
+      - key: SECRET_KEY
+        generateValue: true
+      # Public site: hide the demo-login hint box on the login page.
+      # (The demo account itself still works until you change it — see README "Going live".)
+      - key: SHOW_DEMO_HINT
+        value: "false"
+      # Seeds the demo owner + 48 demo members on first boot of an empty DB.
+      # Set to "false" once you run the gym with real data.
+      - key: SEED_DEMO
+        value: "true"

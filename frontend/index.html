@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Do Gym</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#000000; --bg2:#0a0a0b; --card:#101012; --card2:#17171b;
+  --border:rgba(255,255,255,.07);
+  --blue:#0a84ff;
+  --grad:linear-gradient(135deg,#0a84ff 0%,#2ea8ff 52%,#0060df 100%);
+  --grad-blue:linear-gradient(135deg,#0a84ff,#2ea8ff);
+  --grad-deep:linear-gradient(135deg,#0a84ff,#0060df);
+  --red:#ff3b3b; --red-soft:rgba(255,59,59,.12);
+  --text:#ffffff; --muted:#8e8e93; --muted2:#636366;
+  --radius:16px;
+  --shadow:0 12px 32px rgba(0,0,0,.45);
+  --glow-blue:0 10px 28px rgba(10,132,255,.35);
+  --glow-deep:0 10px 28px rgba(10,132,255,.35);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scrollbar-color:#2a2a2e transparent}
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:#000000 radial-gradient(900px 500px at 15% -5%,rgba(10,132,255,.10),transparent 60%),
+             radial-gradient(900px 500px at 90% 0%,rgba(10,132,255,.12),transparent 60%);
+  color:var(--text); min-height:100dvh;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font-family:inherit;color:var(--text)}
+a{color:#7cc7ff}
+.phone{max-width:430px;margin:0 auto;min-height:100dvh;background:linear-gradient(180deg,var(--bg2),var(--bg));position:relative;box-shadow:0 0 80px rgba(0,0,0,.6);display:flex;flex-direction:column}
+main{flex:1;padding:20px 18px 110px;width:100%}
+.hidden{display:none !important}
+
+/* ---------- typography ---------- */
+h1{font-size:27px;font-weight:900;letter-spacing:-.02em;line-height:1.15}
+h2{font-size:20px;font-weight:800;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13.5px;line-height:1.5}
+.small{font-size:12px;color:var(--muted)}
+.grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ---------- login ---------- */
+#login-view{flex:1;display:flex;flex-direction:column;padding:34px 24px 26px}
+.logo-mark{width:64px;height:64px;border-radius:18px;overflow:hidden;display:flex;flex:none;box-shadow:var(--glow-blue);margin-bottom:20px}
+.logo-mark img{width:100%;height:100%;object-fit:cover;display:block}
+.login-card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--border);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);margin-top:22px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:7px;letter-spacing:.02em}
+.field input{width:100%;background:#0a0a0b;border:1px solid var(--border);border-radius:12px;padding:13px 14px;font-size:15px;outline:none;transition:border-color .2s, box-shadow .2s}
+.field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(10,132,255,.22)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:13px 18px;font-size:15px;font-weight:700;transition:transform .15s, opacity .2s;min-height:48px}
+.btn:active{transform:scale(.98)}
+.btn-grad{background:var(--grad);color:#fff;box-shadow:var(--glow-blue);width:100%}
+.btn-deep{background:var(--grad-deep);color:#fff;box-shadow:var(--glow-deep)}
+.btn-ghost{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text)}
+.btn-sm{padding:9px 14px;font-size:13.5px;min-height:42px;border-radius:10px}
+.error-box{background:var(--red-soft);border:1px solid rgba(255,59,59,.4);color:#ffb4b4;border-radius:12px;padding:11px 13px;font-size:13.5px;margin-bottom:14px;line-height:1.45}
+.hint-box{background:rgba(10,132,255,.10);border:1px solid rgba(10,132,255,.35);border-radius:12px;padding:11px 13px;font-size:13px;color:#cfe8ff;margin-top:14px;line-height:1.55}
+.cookie-note{font-size:12px;color:var(--muted2);text-align:center;margin-top:16px;line-height:1.5}
+.legal-links{display:flex;gap:18px;justify-content:center;margin-top:auto;padding-top:26px;font-size:13px}
+.legal-links a{color:var(--muted);text-decoration:none;font-weight:600}
+.legal-links a:hover{color:#fff}
+
+/* ---------- app header ---------- */
+header.app-header{position:sticky;top:0;z-index:40;background:rgba(10,10,11,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:13px 18px;display:flex;align-items:center;gap:11px}
+.logo-sm{width:38px;height:38px;border-radius:11px;overflow:hidden;display:flex;flex:none;box-shadow:var(--glow-blue)}
+.logo-sm img{width:100%;height:100%;object-fit:cover;display:block}
+.header-titles{flex:1;min-width:0}
+.header-titles .t1{font-size:16.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.header-titles .t2{font-size:11.5px;color:var(--muted)}
+.mode-pill{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.07em;padding:6px 10px;border-radius:999px;text-transform:uppercase}
+.mode-pill.auto{background:var(--grad);color:#fff;box-shadow:var(--glow-blue)}
+.mode-pill.manual{background:#0e1a29;color:#7cc7ff;border:1px solid rgba(10,132,255,.55)}
+.exit-btn{flex:none;font-size:13px;font-weight:700;color:#ffb4b4;background:var(--red-soft);border:1px solid rgba(255,59,59,.35);padding:9px 13px;border-radius:10px;min-height:42px}
+
+/* ---------- mode toggle ---------- */
+.mode-card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--border);border-radius:var(--radius);padding:15px;box-shadow:var(--shadow);margin-bottom:16px}
+.seg{display:flex;background:#101012;border:1px solid var(--border);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;padding:10px;border-radius:9px;font-size:13.5px;font-weight:800;letter-spacing:.03em;color:var(--muted);transition:all .2s;min-height:44px}
+.seg button.on-auto{background:var(--grad);color:#fff;box-shadow:var(--glow-blue)}
+.seg button.on-manual{background:#0e1a29;color:#7cc7ff;box-shadow:inset 0 0 0 1px rgba(10,132,255,.6)}
+
+/* ---------- search ---------- */
+.search-wrap{position:relative;margin-bottom:14px}
+.search-wrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;fill:var(--muted);pointer-events:none}
+.search-wrap input{width:100%;background:#0a0a0b;border:1px solid var(--border);border-radius:12px;padding:12px 40px 12px 40px;font-size:14.5px;outline:none;transition:border-color .2s, box-shadow .2s;min-height:48px}
+.search-wrap input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(10,132,255,.22)}
+.search-clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:15px}
+.search-clear:hover{background:rgba(255,255,255,.07);color:#fff}
+.showing{font-size:12px;color:var(--muted);margin:-6px 2px 12px}
+
+/* ---------- cards & lists ---------- */
+.card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stat-card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--border);border-radius:var(--radius);padding:15px;box-shadow:var(--shadow)}
+.stat-card .num{font-size:29px;font-weight:900;letter-spacing:-.02em;line-height:1.1}
+.stat-card .lbl{font-size:12px;color:var(--muted);font-weight:600;margin-top:3px;line-height:1.4}
+.num-red{color:var(--red)}
+.shortcut-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.shortcut{border-radius:var(--radius);padding:17px 15px;text-align:left;color:#fff;transition:transform .15s;min-height:96px;display:flex;flex-direction:column;justify-content:flex-end;gap:3px}
+.shortcut:active{transform:scale(.98)}
+.shortcut .sc-k{font-size:10.5px;font-weight:800;letter-spacing:.13em;opacity:.85}
+.shortcut .sc-t{font-size:19px;font-weight:900;letter-spacing:-.01em;line-height:1.1}
+.sc-blue{background:var(--grad-blue);box-shadow:var(--glow-blue)}
+.sc-deep{background:var(--grad-deep);box-shadow:var(--glow-deep)}
+.row-card{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--border);border-radius:var(--radius);padding:13px 14px;margin-bottom:10px;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.avatar{width:44px;height:44px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14.5px;color:#fff;background:linear-gradient(135deg,#2a2a2e,#17171b);border:1px solid var(--border)}
+.row-main{flex:1;min-width:0}
+.row-name{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-sub{font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.45}
+.days-badge{flex:none;text-align:right}
+.days-badge .d{font-size:15px;font-weight:800;color:var(--red)}
+.days-badge .dl{font-size:10.5px;color:var(--muted)}
+.call-btn{flex:none;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#ff3b3b,#dc2626);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(255,59,59,.35);text-decoration:none}
+.call-btn svg{width:20px;height:20px;fill:#fff}
+.icon-btn{flex:none;width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+.icon-btn svg{width:19px;height:19px;fill:var(--muted)}
+.x-btn{flex:none;width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);font-size:14px;display:flex;align-items:center;justify-content:center}
+.x-btn:hover{color:#fff}
+.tag{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.08em;padding:3px 7px;border-radius:999px;vertical-align:2px;margin-left:7px}
+.tag-manual{background:#0e1a29;color:#7cc7ff;border:1px solid rgba(10,132,255,.55)}
+.tag-addon{background:rgba(10,132,255,.14);color:#9fd8ff;border:1px solid rgba(10,132,255,.35);margin:3px 4px 0 0}
+.chip-present{background:var(--grad);color:#fff;font-size:12.5px;font-weight:800;padding:9px 13px;border-radius:10px;min-height:42px}
+.chip-mark{background:rgba(255,255,255,.06);border:1px solid var(--border);color:#fff;font-size:12.5px;font-weight:700;padding:9px 13px;border-radius:10px;min-height:42px}
+.empty{background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.14);border-radius:var(--radius);padding:26px 18px;text-align:center;color:var(--muted);font-size:14px;line-height:1.55}
+.empty .e-ico{font-size:30px;display:block;margin-bottom:9px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:22px 0 12px}
+.section-head:first-child{margin-top:0}
+.msg{border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.5;margin-bottom:14px}
+.msg-ok{background:rgba(10,132,255,.13);border:1px solid rgba(10,132,255,.4);color:#d6ecff}
+.msg-err{background:var(--red-soft);border:1px solid rgba(255,59,59,.4);color:#ffb4b4}
+select.sel{width:100%;background:#0a0a0b;border:1px solid var(--border);border-radius:12px;padding:12px;font-size:14.5px;outline:none;min-height:48px}
+input.inp{width:100%;background:#0a0a0b;border:1px solid var(--border);border-radius:12px;padding:12px 13px;font-size:14.5px;outline:none;min-height:48px}
+input.inp:focus,select.sel:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(10,132,255,.22)}
+.qr-box{background:#fff;border-radius:16px;padding:14px;display:flex;align-items:center;justify-content:center;width:208px;height:208px;margin:0 auto}
+.qr-box canvas,.qr-box img{max-width:180px;max-height:180px}
+.qr-box table{border-collapse:collapse}
+.amount{font-weight:800;font-size:15px}
+.days-left{font-weight:800}
+.days-left.bad{color:var(--red)}
+.footer-note{text-align:center;margin-top:26px}
+.link-btn{color:var(--muted);font-size:12.5px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+
+/* ---------- screens / nav ---------- */
+.screen{display:none}
+.screen.active{display:block;animation:fadeUp .32s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+nav.bottom{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(430px,100%);background:rgba(5,5,6,.92);backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;padding:8px 6px calc(10px + env(safe-area-inset-bottom));z-index:50}
+nav.bottom button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;border-radius:12px;color:var(--muted2);font-size:10.5px;font-weight:700;min-height:54px;justify-content:center;transition:color .2s}
+nav.bottom button svg{width:22px;height:22px;fill:currentColor}
+nav.bottom button.on{color:#fff}
+nav.bottom button.on svg{fill:url(#navgrad)}
+nav.bottom button .dot{width:5px;height:5px;border-radius:50%;background:var(--grad);opacity:0}
+nav.bottom button.on .dot{opacity:1}
+
+/* ---------- modal / toast ---------- */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);z-index:80;display:flex;align-items:flex-end;justify-content:center}
+.modal-card{background:var(--card2);border:1px solid var(--border);border-radius:22px 22px 0 0;width:min(430px,100%);max-height:86dvh;overflow-y:auto;padding:22px 20px calc(22px + env(safe-area-inset-bottom));animation:fadeUp .25s ease}
+.modal-card h3{font-size:19px;font-weight:800;margin-bottom:4px}
+#toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);width:min(400px,calc(100% - 36px));background:#17171b;border:1px solid rgba(10,132,255,.5);color:#fff;font-size:14px;font-weight:600;border-radius:13px;padding:13px 16px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:all .3s;z-index:90;text-align:center;line-height:1.45}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.spin{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* ---------- entry flow (signup / details / upgrade) ---------- */
+#signup-view,#details-view,#upgrade-view{flex:1;display:flex;flex-direction:column;padding:34px 24px 26px}
+.field-err{display:none;color:#ff9d9d;font-size:12.5px;font-weight:600;margin-top:6px}
+.field-err.show{display:block}
+.sec-label{font-size:12.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:18px 0 4px}
+.usage-track{height:10px;border-radius:99px;background:#0a0a0b;border:1px solid var(--border);overflow:hidden;margin-top:8px}
+.usage-fill{height:100%;border-radius:99px;background:var(--grad)}
+.plan-card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:14px;position:relative}
+.plan-card.pop{border-color:rgba(10,132,255,.45)}
+.plan-badge{position:absolute;top:-11px;right:16px;background:var(--grad);color:#fff;font-size:11px;font-weight:800;letter-spacing:.05em;padding:4px 10px;border-radius:99px;box-shadow:var(--glow-blue)}
+.plan-feats{list-style:none;margin:12px 0 16px}
+.plan-feats li{font-size:13.5px;color:var(--muted);padding:4px 0 4px 24px;position:relative}
+.plan-feats li::before{content:"✓";position:absolute;left:2px;color:var(--blue);font-weight:800}
+/* ---------- UPI QR payment panel ---------- */
+.pay-qr-card{background:#fff;border-radius:18px;padding:16px;width:min(284px,100%);margin:14px auto 4px;box-shadow:0 14px 34px rgba(0,0,0,.45)}
+.pay-qr-card img{width:100%;height:auto;display:block;border-radius:8px}
+.pay-qr-fallback{display:none;text-align:center;color:#101012;font-weight:800;font-size:15px;padding:38px 12px;line-height:1.55}
+.badge-pending{display:inline-block;background:rgba(245,158,11,.16);color:#fbbf24;border:1px solid rgba(245,158,11,.55);font-size:11px;font-weight:800;letter-spacing:.05em;padding:4px 10px;border-radius:99px;text-transform:uppercase}
+.badge-active{display:inline-block;background:rgba(52,211,153,.14);color:#6ee7b7;border:1px solid rgba(52,211,153,.45);font-size:11px;font-weight:800;letter-spacing:.05em;padding:4px 10px;border-radius:99px;text-transform:uppercase}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<linearGradient id="navgrad" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#0a84ff"/><stop offset=".52" stop-color="#2ea8ff"/><stop offset="1" stop-color="#0060df"/>
+</linearGradient></defs></svg>
+
+<div class="phone">
+
+  <!-- ================= LOGIN ================= -->
+  <div id="login-view">
+    <div class="logo-mark"><img src="/icon-512.png" alt="Do Gym"></div>
+    <h1>Do <span class="grad-text">Gym</span></h1>
+    <p class="sub" style="margin-top:7px">Owner App — your members, renewals and daily check-ins, all in one place.</p>
+
+    <form class="login-card" id="login-form" autocomplete="on">
+      <h2 style="margin-bottom:16px">Owner Login</h2>
+      <div id="login-error" class="error-box hidden"></div>
+      <div id="login-note" class="hint-box hidden" style="margin:0 0 14px"></div>
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input id="login-email" type="email" name="email" placeholder="you@yourgym.in" autocomplete="username" maxlength="120" required>
+      </div>
+      <div class="field">
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" name="password" placeholder="Your password" autocomplete="current-password" maxlength="100" required>
+      </div>
+      <button class="btn btn-grad" type="submit" id="login-btn">Log In</button>
+      <div class="hint-box" id="demo-hint"><strong>Demo login</strong> — Email: owner@powerhousegym.in<br>Password: Gym@2026</div>
+    </form>
+    <p class="cookie-note">We use one small cookie to keep you logged in securely. No tracking, no ads, ever.</p>
+    <button class="link-btn" id="go-signup" type="button" style="margin-top:14px">New gym? Create an account →</button>
+    <div class="legal-links">
+      <a href="/pricing">Plans &amp; Pricing</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Use</a>
+    </div>
+  </div>
+
+  <!-- ================= SIGNUP ================= -->
+  <div id="signup-view" class="hidden">
+    <div class="logo-mark"><img src="/icon-512.png" alt="Do Gym"></div>
+    <h1>Create your <span class="grad-text">gym account</span></h1>
+    <p class="sub" style="margin-top:7px">Start managing members, no-shows and renewals in minutes.</p>
+    <form class="login-card" id="signup-form" novalidate>
+      <h2 style="margin-bottom:16px">Sign Up</h2>
+      <div id="signup-error" class="error-box hidden"></div>
+      <div class="field"><label for="s-owner">Your Full Name</label>
+        <input id="s-owner" type="text" placeholder="e.g. Rahul Sharma" autocomplete="name" maxlength="120">
+        <p class="field-err" id="err-s-owner_name"></p></div>
+      <div class="field"><label for="s-gym">Gym Name</label>
+        <input id="s-gym" type="text" placeholder="e.g. PowerHouse Gym" autocomplete="organization" maxlength="160">
+        <p class="field-err" id="err-s-gym_name"></p></div>
+      <div class="field"><label for="s-email">Email</label>
+        <input id="s-email" type="email" placeholder="you@yourgym.in" autocomplete="email" maxlength="255">
+        <p class="field-err" id="err-s-email"></p></div>
+      <div class="field"><label for="s-mobile">Mobile Number</label>
+        <input id="s-mobile" type="tel" placeholder="10-digit mobile number" autocomplete="tel" maxlength="15">
+        <p class="field-err" id="err-s-mobile"></p></div>
+      <div class="field"><label for="s-password">Password</label>
+        <input id="s-password" type="password" placeholder="At least 6 characters" autocomplete="new-password" maxlength="100">
+        <p class="field-err" id="err-s-password"></p></div>
+      <button class="btn btn-grad" type="submit" id="signup-btn">Create Account →</button>
+    </form>
+    <button class="link-btn" id="go-login" type="button" style="margin-top:14px">Already have an account? Log in</button>
+    <div class="legal-links">
+      <a href="/pricing">Plans &amp; Pricing</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Use</a>
+    </div>
+  </div>
+
+  <!-- ================= DETAILS ================= -->
+  <div id="details-view" class="hidden">
+    <button class="link-btn hidden" id="details-back" type="button" style="align-self:flex-start;margin-bottom:10px">‹ Back to app</button>
+    <div class="logo-mark"><img src="/icon-512.png" alt="Do Gym"></div>
+    <h1>Gym &amp; <span class="grad-text">Owner Details</span></h1>
+    <p class="sub" style="margin-top:7px">Tell us about your gym once — you can change this anytime later in Settings.</p>
+    <form class="login-card" id="details-form" novalidate style="text-align:left">
+      <div id="details-error" class="error-box hidden"></div>
+      <p class="sec-label">🏢 Gym Details</p>
+      <div class="field"><label for="d-gym-name">Gym Name</label>
+        <input id="d-gym-name" type="text" placeholder="e.g. PowerHouse Gym" maxlength="160">
+        <p class="field-err" id="err-d-gym_name"></p></div>
+      <div class="field"><label for="d-address">Gym Address</label>
+        <input id="d-address" type="text" placeholder="Street, area, landmark" maxlength="255">
+        <p class="field-err" id="err-d-gym_address"></p></div>
+      <div class="field"><label for="d-city">City</label>
+        <input id="d-city" type="text" placeholder="e.g. Hyderabad" maxlength="80">
+        <p class="field-err" id="err-d-gym_city"></p></div>
+      <div class="field"><label for="d-phone">Gym Phone</label>
+        <input id="d-phone" type="tel" placeholder="10-digit phone number" maxlength="15">
+        <p class="field-err" id="err-d-gym_phone"></p></div>
+      <div class="field"><label for="d-year">Opening Year <span style="color:var(--muted2)">(optional)</span></label>
+        <input id="d-year" type="number" inputmode="numeric" placeholder="e.g. 2019">
+        <p class="field-err" id="err-d-opening_year"></p></div>
+      <p class="sec-label">👤 Owner Details</p>
+      <div class="field"><label for="d-owner">Owner Full Name</label>
+        <input id="d-owner" type="text" placeholder="Your full name" maxlength="120">
+        <p class="field-err" id="err-d-owner_name"></p></div>
+      <div class="field"><label for="d-mobile">Mobile Number</label>
+        <input id="d-mobile" type="tel" placeholder="10-digit mobile number" maxlength="15">
+        <p class="field-err" id="err-d-mobile"></p></div>
+      <div class="field"><label for="d-email">Email</label>
+        <input id="d-email" type="email" disabled>
+        <p class="hint">Your login email — it cannot be changed here.</p></div>
+      <div class="field"><label for="d-whatsapp">WhatsApp Number <span style="color:var(--muted2)">(optional)</span></label>
+        <input id="d-whatsapp" type="tel" placeholder="10-digit WhatsApp number" maxlength="15">
+        <p class="field-err" id="err-d-whatsapp"></p></div>
+      <button class="btn btn-grad" type="submit" id="details-save">Save &amp; Continue →</button>
+    </form>
+  </div>
+
+  <!-- ================= UPGRADE / CHOOSE PLAN ================= -->
+  <div id="upgrade-view" class="hidden">
+    <div class="logo-mark">💎</div>
+    <h1>Choose your <span class="grad-text">plan</span></h1>
+    <p class="sub" style="margin-top:7px">One last step — pick the plan that fits your gym. You can change it anytime from Plan &amp; Billing.</p>
+    <div class="seg" style="margin:16px 0">
+      <button type="button" id="up-monthly" class="on">Monthly</button>
+      <button type="button" id="up-yearly">Yearly · 2 months free 🎉</button>
+    </div>
+    <div id="upgrade-cards"></div>
+    <p class="cookie-note">Pay securely by scanning the UPI QR on the next step — GPay, PhonePe, Paytm and every UPI app work.<br>Prices in INR. GST extra as applicable. Cancel anytime.</p>
+  </div>
+
+  <!-- ================= APP ================= -->
+  <div id="app-view" class="hidden" style="display:flex;flex-direction:column;flex:1;min-height:100dvh">
+    <header class="app-header">
+      <div class="logo-sm"><img src="/icon-192.png" alt="Do Gym"></div>
+      <div class="header-titles">
+        <div class="t1" id="hdr-gym">PowerHouse Gym</div>
+        <div class="t2">Owner App</div>
+      </div>
+      <span id="mode-pill" class="mode-pill auto">Auto Mode</span>
+      <button class="exit-btn" id="logout-btn" type="button">Exit</button>
+    </header>
+
+    <main id="main-scroll">
+      <!-- HOME -->
+      <section class="screen" id="screen-home"></section>
+      <!-- NO-SHOW RED LIST -->
+      <section class="screen" id="screen-red"></section>
+      <!-- QR CHECK-IN -->
+      <section class="screen" id="screen-checkin"></section>
+      <!-- RENEWAL -->
+      <section class="screen" id="screen-renewal"></section>
+      <!-- ADD-ONS -->
+      <section class="screen" id="screen-addons"></section>
+      <!-- PLAN & BILLING -->
+      <section class="screen" id="screen-plan"></section>
+    </main>
+
+    <nav class="bottom" id="bottom-nav">
+      <button data-tab="home" type="button"><svg viewBox="0 0 24 24"><path d="M12 3l9 8h-3v9a1 1 0 0 1-1 1h-4v-6H11v6H7a1 1 0 0 1-1-1V11H3l9-8z"/></svg>Home<span class="dot"></span></button>
+      <button data-tab="red" type="button"><svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-7h-2v5h2V9z"/></svg>No-Show<span class="dot"></span></button>
+      <button data-tab="checkin" type="button"><svg viewBox="0 0 24 24"><path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v3h-3v-3zm-5 5h3v3h-3v-3zm5 0h3v3h-3v-3z"/></svg>Check-In<span class="dot"></span></button>
+      <button data-tab="renewal" type="button"><svg viewBox="0 0 24 24"><path d="M12 5V1.8L5.8 8 12 14.2V11a6 6 0 1 1-6 6H3.5A8.5 8.5 0 1 0 12 5z"/></svg>Renewal<span class="dot"></span></button>
+      <button data-tab="addons" type="button"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>Add-Ons<span class="dot"></span></button>
+      <button data-tab="plan" type="button"><svg viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 14H4v-6h16v6zM4 8h16v2H4z"/></svg>Plan<span class="dot"></span></button>
+    </nav>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+<div id="toast" role="status"></div>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const inr = n => "₹" + Number(n).toLocaleString("en-IN");
+function fmtDate(iso){ if(!iso) return "—"; const [y,m,d] = iso.split("-").map(Number); return d + " " + MONTHS[m-1]; }
+function fmtFull(iso){ if(!iso) return "—"; const [y,m,d] = iso.split("-").map(Number); return d + " " + MONTHS[m-1] + " " + y; }
+function initials(name){ return name.split(/\s+/).map(w => w[0]).join("").slice(0,2).toUpperCase(); }
+function daysAgoText(m){
+  if (m.checked_in_today) return "Came today";
+  if (m.days_absent === 1) return "Last visit: " + fmtDate(m.last_visit) + " (yesterday)";
+  return "Last visit: " + fmtDate(m.last_visit) + " (" + m.days_absent + " days ago)";
+}
+function addonTags(m){
+  if (!m.addons || !m.addons.length) return "";
+  return '<div>' + m.addons.map(a => '<span class="tag tag-addon">' + esc(a.addon_name) + "</span>").join("") + "</div>";
+}
+function phoneHref(p){ return "tel:+91" + String(p).replace(/\D/g, ""); }
+function phoneText(p){ const d = String(p).replace(/\D/g, ""); return "+91 " + d.slice(0,5) + " " + d.slice(5); }
+
+let MODE = "auto";
+let TAB = "home";
+const SEARCH = { home:"", red:"", checkin:"", renewal:"", addons:"", plan:"" };
+let RED_FILTER = 10;
+const DATA = { members: [], stats: null, red: [], renewals: null, addons: null, today: [] };
+
+/* ---------------- API layer ---------------- */
+async function api(path, opts = {}){
+  let res;
+  try {
+    res = await fetch(path, { credentials: "same-origin", headers: { "Content-Type": "application/json" }, ...opts });
+  } catch (e) {
+    toast("We could not reach the server. Please check your connection and try again.");
+    throw e;
+  }
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* non-JSON */ }
+  if (res.status === 401 && !path.includes("/api/login") && !path.includes("/api/me")) {
+    showLogin("Your session has ended. Please log in again to continue.");
+    throw new Error("unauthenticated");
+  }
+  return { status: res.status, ok: res.ok, data };
+}
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+/* ---------------- Views & entry flow routing ---------------- */
+let ME = null;
+let APP_INITED = false;
+const FLOW_VIEWS = ["login", "signup", "details", "upgrade", "app"];
+function showView(name){
+  FLOW_VIEWS.forEach(v => { const el = document.getElementById(v + "-view"); if (el) el.classList.toggle("hidden", v !== name); });
+  window.scrollTo({ top: 0 });
+}
+function showLogin(note){
+  showView("login");
+  const n = $("#login-note");
+  if (note) { n.textContent = note; n.classList.remove("hidden"); }
+  else n.classList.add("hidden");
+  $("#login-error").classList.add("hidden");
+}
+function showApp(){ showView("app"); }
+function setGymName(){ if (ME && ME.gym_name) $("#hdr-gym").textContent = ME.gym_name; }
+/* The route guard: no login → Login; no details → Details; no plan → Upgrade; else the app. */
+async function routeAfterAuth(){
+  const r = await api("/api/me").catch(() => null);
+  if (!r || !r.ok) { showLogin(); return; }
+  ME = r.data;
+  setGymName();
+  if (!ME.details_completed) { await openDetails(false); return; }
+  if (!ME.plan_chosen) { await openUpgrade(); return; }
+  await enterApp();
+}
+async function enterApp(){
+  showView("app");
+  if (!APP_INITED) { APP_INITED = true; await initApp(); }
+  else await switchTab(TAB);
+}
+$("#login-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const email = $("#login-email").value.trim();
+  const password = $("#login-password").value;
+  const errBox = $("#login-error");
+  errBox.classList.add("hidden");
+  if (!email || !password) {
+    errBox.textContent = "Please enter both your email and your password.";
+    errBox.classList.remove("hidden");
+    return;
+  }
+  const btn = $("#login-btn");
+  btn.innerHTML = '<span class="spin"></span> Logging in…';
+  btn.disabled = true;
+  try {
+    const r = await api("/api/login", { method: "POST", body: JSON.stringify({ email, password }) });
+    if (r.ok) {
+      $("#login-password").value = "";
+      toast("Welcome back! You are logged in.");
+      await routeAfterAuth();
+    } else {
+      errBox.textContent = r.data.detail || "Login failed. Please try again.";
+      errBox.classList.remove("hidden");
+    }
+  } finally {
+    btn.textContent = "Log In";
+    btn.disabled = false;
+  }
+});
+$("#logout-btn").addEventListener("click", async () => {
+  await api("/api/logout", { method: "POST" }).catch(() => {});
+  ME = null;
+  showLogin();
+  toast("You have been logged out safely.");
+});
+
+/* ---------------- Navigation ---------------- */
+$$("#bottom-nav button").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+async function switchTab(name){
+  TAB = name;
+  SEARCH[name] = ""; // search resets when switching tabs
+  $$("#bottom-nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === name));
+  $$(".screen").forEach(s => s.classList.remove("active"));
+  $("#screen-" + name).classList.add("active");
+  window.scrollTo({ top: 0 });
+  if (name === "home") await renderHome();
+  else if (name === "red") await renderRed();
+  else if (name === "checkin") await renderCheckin();
+  else if (name === "renewal") await renderRenewal();
+  else if (name === "addons") await renderAddons();
+  else if (name === "plan") await renderPlan();
+}
+
+/* ---------------- Mode ---------------- */
+function syncModeUI(){
+  const pill = $("#mode-pill");
+  pill.textContent = MODE === "auto" ? "Auto Mode" : "Manual Mode";
+  pill.className = "mode-pill " + MODE;
+  $$(".seg button[data-mode]").forEach(b => {
+    b.className = b.dataset.mode === MODE ? (MODE === "auto" ? "on-auto" : "on-manual") : "";
+  });
+}
+async function setMode(m){
+  if (m === MODE) return;
+  const r = await api("/api/mode", { method: "PUT", body: JSON.stringify({ mode: m }) });
+  if (r.ok) {
+    MODE = r.data.mode;
+    syncModeUI();
+    toast(MODE === "auto" ? "Auto mode is ON. The app now updates everything by itself." : "Manual mode is ON. You are in control now.");
+    await switchTab(TAB);
+  }
+}
+function modeCardHTML(){
+  return '<div class="mode-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+    '<strong style="font-size:15px">App Mode</strong><span class="mode-pill ' + MODE + '">' + (MODE === "auto" ? "Auto Mode" : "Manual Mode") + "</span></div>" +
+    '<p class="small" style="margin-bottom:12px">' + (MODE === "auto"
+      ? "Everything updates by itself — lists, counts and revenue."
+      : "Automatic updates are paused. You add, clear and mark things by hand.") + "</p>" +
+    '<div class="seg"><button type="button" data-mode="auto">AUTO</button><button type="button" data-mode="manual">MANUAL</button></div></div>';
+}
+function wireModeCard(root){
+  root.querySelectorAll(".seg button[data-mode]").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  syncModeUI();
+}
+
+/* ---------------- Search bar ---------------- */
+function searchHTML(key, placeholder){
+  return '<div class="search-wrap"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>' +
+    '<input type="text" id="search-' + key + '" placeholder="' + esc(placeholder) + '" value="' + esc(SEARCH[key]) + '" maxlength="60" autocomplete="off">' +
+    (SEARCH[key] ? '<button type="button" class="search-clear" id="clear-' + key + '" aria-label="Clear search">✕</button>' : "") + "</div>";
+}
+function matchQ(m, q){
+  if (!q) return true;
+  q = q.trim().toLowerCase();
+  return m.name.toLowerCase().includes(q) || m.code.toLowerCase().includes(q);
+}
+function emptyHTML(ico, title, sub){
+  return '<div class="empty"><span class="e-ico">' + ico + "</span><strong style='color:#fff'>" + esc(title) + "</strong><br>" + esc(sub) + "</div>";
+}
+function noMatchHTML(q){
+  return emptyHTML("🔍", "No member found for '" + q + "'", "Check the spelling, or try a part of the name or the member code (like PHG-001).");
+}
+
+/* ---------------- Check-in action (shared) ---------------- */
+async function doCheckIn(memberId, after){
+  const r = await api("/api/checkin", { method: "POST", body: JSON.stringify({ member_id: memberId }) });
+  if (r.ok) toast(r.data.message);
+  else toast(r.data.detail || "Check-in failed. Please try again.");
+  if (after) await after();
+  return r;
+}
+
+/* ================= HOME ================= */
+async function renderHome(){
+  const el = $("#screen-home");
+  const [stats, today, members] = await Promise.all([
+    api("/api/stats"), api("/api/checkins/today"), api("/api/members"),
+  ]);
+  if (!stats.ok) return;
+  DATA.stats = stats.data; DATA.today = today.data.checkins || []; DATA.members = members.data.members || [];
+  MODE = DATA.stats.mode || MODE;
+  el.innerHTML =
+    "<h1>Hi, Sir</h1>" +
+    '<p class="sub" style="margin:6px 0 18px">Here is your gym today — who came, who is missing, and what needs your attention.</p>' +
+    '<div id="home-mode"></div>' +
+    '<div id="home-plan"></div>' +
+    searchHTML("home", "Quick-find a member… (name or code)") +
+    '<div id="home-quickfind"></div>' +
+    '<div class="stat-grid">' +
+      statCard(DATA.stats.total_members, "Total Members") +
+      statCard(DATA.stats.checked_in_today, "Checked In Today") +
+      statCard('<span class="num-red">' + DATA.stats.red_list_count + "</span>", "No-Show Red List") +
+      statCard(DATA.stats.renewals_due, "Renewals Due (7 days)") +
+    "</div>" +
+    '<div class="shortcut-grid">' +
+      '<button class="shortcut sc-blue" data-go="red"><span class="sc-k">SCREEN 1</span><span class="sc-t">NO-SHOW</span></button>' +
+      '<button class="shortcut sc-deep" data-go="checkin"><span class="sc-k">SCREEN 2</span><span class="sc-t">QR CHECK-IN</span></button>' +
+      '<button class="shortcut sc-blue" data-go="renewal"><span class="sc-k">SCREEN 3</span><span class="sc-t">RENEWAL</span></button>' +
+      '<button class="shortcut sc-deep" data-go="addons"><span class="sc-k">SCREEN 4</span><span class="sc-t">ADD-ONS</span></button>' +
+    "</div>" +
+    '<div class="section-head"><h2>Today\'s Check-Ins</h2><span class="small">' + DATA.today.length + " member" + (DATA.today.length === 1 ? "" : "s") + "</span></div>" +
+    '<div id="home-today">' + todayListHTML() + "</div>" +
+    '<div class="footer-note"><button class="link-btn" id="reset-btn" type="button">Reset Demo Data</button>' +
+    '<div class="legal-links" style="padding-top:14px"><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Use</a></div></div>';
+  $("#home-mode").innerHTML = modeCardHTML();
+  wireModeCard(el);
+  api("/api/plan").then(r => {
+    const box = $("#home-plan");
+    if (!r.ok || !box) return;
+    const used = r.data.usage.members_used;
+    const limit = r.data.usage.member_limit;
+    box.innerHTML = '<div class="mode-card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center">' +
+      '<strong style="font-size:15px">💎 ' + esc(r.data.plan.name) + ' Plan</strong>' +
+      '<button type="button" class="btn btn-ghost btn-sm" id="home-plan-manage">Manage</button></div>' +
+      '<p class="small" style="margin-top:6px">' + (r.data.period === "monthly" ? "Monthly" : "Yearly") + " billing · " + used + (limit ? " / " + limit : "") + " members" + (limit ? "" : " · Unlimited") + "</p></div>";
+    const mb = $("#home-plan-manage");
+    if (mb) mb.addEventListener("click", () => switchTab("plan"));
+  }).catch(() => {});
+  el.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.go)));
+  $("#reset-btn").addEventListener("click", async () => {
+    if (!confirm("Reset all demo data back to the start? This will undo check-ins, renewals and add-ons you added.")) return;
+    const r = await api("/api/reset", { method: "POST" });
+    if (r.ok) { toast("Demo data has been reset."); await renderHome(); }
+  });
+  const inp = $("#search-home");
+  inp.addEventListener("input", () => { SEARCH.home = inp.value; paintQuickFind(); refreshClearBtn("home", paintQuickFind); });
+  const clr = $("#clear-home");
+  if (clr) clr.addEventListener("click", () => { SEARCH.home = ""; renderHome(); });
+  paintQuickFind();
+}
+function statCard(num, lbl){
+  return '<div class="stat-card"><div class="num">' + num + '</div><div class="lbl">' + esc(lbl) + "</div></div>";
+}
+function todayListHTML(){
+  if (!DATA.today.length) return emptyHTML("🌅", "No check-ins yet today", "When members check in, they will appear here with the time.");
+  return DATA.today.map(c =>
+    '<div class="row-card"><div class="avatar">' + esc(initials(c.name)) + '</div><div class="row-main"><div class="row-name">' + esc(c.name) +
+    '</div><div class="row-sub">' + esc(c.code) + '</div></div><div class="days-badge"><div class="d" style="color:#fff">' + esc(c.time) + '</div><div class="dl">checked in</div></div></div>'
+  ).join("");
+}
+function paintQuickFind(){
+  const box = $("#home-quickfind");
+  if (!box) return;
+  const q = SEARCH.home.trim();
+  if (!q) { box.innerHTML = ""; return; }
+  const hits = DATA.members.filter(m => matchQ(m, q)).slice(0, 6);
+  if (!hits.length) { box.innerHTML = noMatchHTML(q) + '<div style="height:14px"></div>'; return; }
+  box.innerHTML = '<p class="showing">Showing ' + hits.length + " member" + (hits.length === 1 ? "" : "s") + "</p>" + hits.map(m =>
+    '<div class="card" style="margin-bottom:12px"><div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">' +
+    '<div class="avatar">' + esc(initials(m.name)) + '</div><div class="row-main"><div class="row-name">' + esc(m.name) + '</div><div class="row-sub">' + esc(m.code) + " · " + esc(phoneText(m.phone)) + "</div></div></div>" +
+    '<div class="row-sub" style="font-size:13px;line-height:1.65">' +
+    "🗓 " + esc(daysAgoText(m)) + "<br>" +
+    "🎟 " + esc(m.plan) + " plan · Expires " + esc(fmtDate(m.expiry_date)) + " (" + (m.days_left < 0 ? Math.abs(m.days_left) + " days ago — expired" : m.days_left === 0 ? "today" : m.days_left + " days left") + ")<br>" +
+    "➕ Add-ons: " + (m.addons.length ? esc(m.addons.map(a => a.addon_name).join(", ")) : "None") + "</div>" +
+    '<div style="display:flex;gap:9px;margin-top:13px">' +
+    '<a class="btn btn-ghost btn-sm" style="flex:1;text-decoration:none" href="' + esc(phoneHref(m.phone)) + '">📞 Call</a>' +
+    (m.checked_in_today
+      ? '<button class="btn btn-sm" style="flex:1;background:rgba(255,255,255,.08);color:var(--muted)" disabled>Checked in ✓</button>'
+      : '<button class="btn btn-deep btn-sm" style="flex:1" data-qf-checkin="' + m.id + '">Check In</button>') +
+    "</div></div>"
+  ).join("");
+  box.querySelectorAll("[data-qf-checkin]").forEach(b => b.addEventListener("click", () => doCheckIn(Number(b.dataset.qfCheckin), renderHome)));
+}
+function refreshClearBtn(key, repaint){
+  // re-render is handled by screen renderers on next visit; clear button presence updates on input is cosmetic — keep simple:
+}
+
+/* ================= NO-SHOW RED LIST ================= */
+async function renderRed(){
+  const el = $("#screen-red");
+  const [red, members] = await Promise.all([
+    api("/api/red-list?min_days=" + RED_FILTER), api("/api/members"),
+  ]);
+  if (!red.ok) return;
+  DATA.red = red.data.members || []; DATA.members = members.data.members || [];
+  const inList = new Set(DATA.red.map(m => m.id));
+  const pickerOptions = DATA.members.filter(m => !inList.has(m.id));
+  el.innerHTML =
+    '<div class="section-head"><h1 style="font-size:24px">No-Show <span style="color:var(--red)">Red List</span></h1>' +
+    '<button class="icon-btn" id="red-filter" type="button" title="Filter days" aria-label="Filter days"><svg viewBox="0 0 24 24"><path d="M4 4h16v2.5l-6.2 7.1V19l-3.6 2v-7.4L4 6.5V4z"/></svg></button></div>' +
+    '<p class="sub" style="margin-bottom:14px">These members have stopped coming. One call today can save a membership.</p>' +
+    (MODE === "manual"
+      ? '<div class="card" style="margin-bottom:14px"><strong style="font-size:14.5px">Add a member by hand</strong>' +
+        '<p class="small" style="margin:5px 0 11px">Manual mode: flag any member onto this list yourself.</p>' +
+        '<div style="display:flex;gap:9px"><select class="sel" id="flag-picker" style="flex:1">' +
+        (pickerOptions.length ? pickerOptions.map(m => '<option value="' + m.id + '">' + esc(m.name) + " (" + esc(m.code) + ")</option>").join("") : '<option value="">Everyone is already on the list</option>') +
+        '</select><button class="btn btn-grad btn-sm" id="flag-add" type="button" style="width:auto">Add</button></div></div>'
+      : "") +
+    searchHTML("red", "Search this list… (name or code)") +
+    '<div style="text-align:center;padding:8px 0 16px"><div style="color:var(--red);font-size:14px;font-weight:700">' + RED_FILTER + '+ Days Absent</div>' +
+    '<div style="font-size:56px;font-weight:900;line-height:1.05;color:var(--red)" id="red-count">' + DATA.red.length + '</div><div class="small">Members</div></div>' +
+    '<p class="showing" id="red-showing"></p><div id="red-list"></div>';
+  $("#red-filter").addEventListener("click", () => {
+    RED_FILTER = RED_FILTER === 10 ? 15 : RED_FILTER === 15 ? 20 : 10;
+    renderRed();
+  });
+  const addBtn = $("#flag-add");
+  if (addBtn) addBtn.addEventListener("click", async () => {
+    const sel = $("#flag-picker");
+    if (!sel.value) return;
+    const r = await api("/api/red-list/flag", { method: "POST", body: JSON.stringify({ member_id: Number(sel.value) }) });
+    if (r.ok) { toast("Member added to the Red List."); await renderRed(); }
+  });
+  const inp = $("#search-red");
+  inp.addEventListener("input", () => { SEARCH.red = inp.value; paintRedList(); });
+  const clr = $("#clear-red");
+  if (clr) clr.addEventListener("click", () => { SEARCH.red = ""; renderRed(); });
+  paintRedList();
+}
+function paintRedList(){
+  const box = $("#red-list");
+  if (!box) return;
+  const hits = DATA.red.filter(m => matchQ(m, SEARCH.red));
+  const sh = $("#red-showing");
+  if (sh) sh.textContent = SEARCH.red ? "Showing " + hits.length + " of " + DATA.red.length + " members" : "";
+  if (!hits.length) {
+    box.innerHTML = SEARCH.red ? noMatchHTML(SEARCH.red) : emptyHTML("🎉", "All clear — nobody is missing!", "Every member has visited recently. Great work, keep it up.");
+    return;
+  }
+  box.innerHTML = hits.map(m =>
+    '<div class="row-card"><div class="avatar">' + esc(initials(m.name)) + '</div>' +
+    '<div class="row-main"><div class="row-name">' + esc(m.name) + (m.manual ? '<span class="tag tag-manual">Manual</span>' : "") +
+    '</div><div class="row-sub">Last visit: ' + esc(fmtDate(m.last_visit)) + " · " + esc(m.code) + "</div></div>" +
+    '<div class="days-badge"><div class="d">' + m.days_absent + '</div><div class="dl">Days</div></div>' +
+    '<a class="call-btn" href="' + esc(phoneHref(m.phone)) + '" aria-label="Call ' + esc(m.name) + '"><svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z"/></svg></a>' +
+    (MODE === "manual" ? '<button class="x-btn" data-red-x="' + m.id + '" data-manual="' + (m.manual ? "1" : "0") + '" type="button" aria-label="Remove from list">✕</button>' : "") +
+    "</div>"
+  ).join("");
+  box.querySelectorAll("[data-red-x]").forEach(b => b.addEventListener("click", async () => {
+    const id = Number(b.dataset.redX);
+    if (b.dataset.manual === "1") await api("/api/red-list/flag/" + id, { method: "DELETE" });
+    else await api("/api/red-list/clear", { method: "POST", body: JSON.stringify({ member_id: id }) });
+    toast("Removed from the Red List.");
+    await renderRed();
+  }));
+}
+
+/* ================= QR CHECK-IN ================= */
+async function renderCheckin(){
+  const el = $("#screen-checkin");
+  const [members, today] = await Promise.all([api("/api/members"), api("/api/checkins/today")]);
+  if (!members.ok) return;
+  DATA.members = members.data.members || []; DATA.today = today.data.checkins || [];
+  el.innerHTML =
+    "<h1 style='font-size:24px;margin-bottom:6px'>QR <span class='grad-text'>Check-In</span></h1>" +
+    '<p class="sub" style="margin-bottom:16px">Members scan the gym code at the door — or check them in yourself below. The moment someone checks in, they leave the Red List automatically.</p>' +
+    '<div class="card" style="text-align:center;margin-bottom:14px"><div style="font-weight:800;font-size:15px;margin-bottom:4px">Gym Entry Code</div>' +
+    '<p class="small" style="margin-bottom:13px">Print this and stick it at the front desk.</p><div class="qr-box" id="gym-qr"></div>' +
+    '<div style="font-weight:800;letter-spacing:.14em;margin-top:12px">POWERHOUSE-GYM</div></div>' +
+    '<div id="ci-msg"></div>' +
+    '<div class="card" style="margin-bottom:16px"><strong style="font-size:15px">Check in by member code</strong>' +
+    '<div style="display:flex;gap:9px;margin-top:12px"><input class="inp" id="ci-code" placeholder="e.g. PHG-001" maxlength="20" style="flex:1;text-transform:uppercase">' +
+    '<button class="btn btn-grad btn-sm" id="ci-go" type="button" style="width:auto">Check In</button></div>' +
+    '<button class="btn btn-deep" id="ci-sim" type="button" style="width:100%;margin-top:11px">📷 Simulate a Scan</button>' +
+    '<p class="small" style="margin-top:10px">Simulate Scan picks a member who has not come today — just like a real scan at the door.</p></div>' +
+    '<div class="section-head"><h2>' + (MODE === "manual" ? "Mark Attendance (Manual)" : "All Members") + '</h2><span class="small">' + DATA.today.length + " in today</span></div>" +
+    searchHTML("checkin", "Search members… (name or code)") +
+    '<p class="showing" id="ci-showing"></p><div id="ci-list"></div>';
+  drawQR($("#gym-qr"), "POWERHOUSE-GYM-CHECKIN");
+  const showCiMsg = (html, ok) => { $("#ci-msg").innerHTML = '<div class="msg ' + (ok ? "msg-ok" : "msg-err") + '">' + html + "</div>"; };
+  $("#ci-go").addEventListener("click", async () => {
+    const code = $("#ci-code").value.trim();
+    if (!code) { showCiMsg("Please type a member code first — for example PHG-001.", false); return; }
+    const r = await api("/api/checkin", { method: "POST", body: JSON.stringify({ code }) });
+    if (r.ok) { showCiMsg("✅ " + esc(r.data.message) + " Red List is now at " + r.data.red_list_count + " members.", true); await refreshCiLists(); }
+    else showCiMsg(esc(r.data.detail || "Check-in failed. Please try again."), false);
+  });
+  $("#ci-sim").addEventListener("click", async (ev) => {
+    const btn = ev.currentTarget;
+    btn.innerHTML = '<span class="spin"></span> Scanning…';
+    btn.disabled = true;
+    const pending = DATA.members.filter(m => !m.checked_in_today);
+    if (!pending.length) { showCiMsg("Everyone has already checked in today. 🎉", true); btn.textContent = "📷 Simulate a Scan"; btn.disabled = false; return; }
+    const pick = pending[Math.floor(Math.random() * pending.length)];
+    setTimeout(async () => {
+      const r = await api("/api/checkin", { method: "POST", body: JSON.stringify({ member_id: pick.id }) });
+      if (r.ok) showCiMsg("📷 Scanned " + esc(pick.code) + " — " + esc(r.data.message), true);
+      btn.textContent = "📷 Simulate a Scan"; btn.disabled = false;
+      await refreshCiLists();
+    }, 650);
+  });
+  const inp = $("#search-checkin");
+  inp.addEventListener("input", () => { SEARCH.checkin = inp.value; paintCiList(); });
+  const clr = $("#clear-checkin");
+  if (clr) clr.addEventListener("click", () => { SEARCH.checkin = ""; renderCheckin(); });
+  paintCiList();
+}
+async function refreshCiLists(){
+  const [members, today] = await Promise.all([api("/api/members"), api("/api/checkins/today")]);
+  if (members.ok) DATA.members = members.data.members || [];
+  if (today.ok) DATA.today = today.data.checkins || [];
+  paintCiList();
+}
+function paintCiList(){
+  const box = $("#ci-list");
+  if (!box) return;
+  const hits = DATA.members.filter(m => matchQ(m, SEARCH.checkin));
+  const sh = $("#ci-showing");
+  if (sh) sh.textContent = SEARCH.checkin ? "Showing " + hits.length + " of " + DATA.members.length + " members" : "";
+  if (!hits.length) { box.innerHTML = noMatchHTML(SEARCH.checkin); return; }
+  box.innerHTML = hits.map(m =>
+    '<div class="row-card"><div class="avatar">' + esc(initials(m.name)) + '</div>' +
+    '<div class="row-main"><div class="row-name">' + esc(m.name) + '</div><div class="row-sub">' + esc(m.code) + " · " + esc(daysAgoText(m)) + "</div>" + addonTags(m) + "</div>" +
+    '<button class="icon-btn" data-qr="' + m.id + '" type="button" aria-label="Show QR code"><svg viewBox="0 0 24 24"><path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v3h-3v-3zm-5 5h3v3h-3v-3zm5 0h3v3h-3v-3z"/></svg></button>' +
+    (MODE === "manual"
+      ? (m.checked_in_today
+          ? '<button class="chip-present" data-unmark="' + m.id + '" type="button">Present ✓</button>'
+          : '<button class="chip-mark" data-mark="' + m.id + '" type="button">Mark Present</button>')
+      : (m.checked_in_today
+          ? '<span class="chip-present" style="cursor:default">In ✓</span>'
+          : '<button class="chip-mark" data-ci="' + m.id + '" type="button">Check In</button>')) +
+    "</div>"
+  ).join("");
+  box.querySelectorAll("[data-qr]").forEach(b => b.addEventListener("click", () => openQRModal(Number(b.dataset.qr))));
+  box.querySelectorAll("[data-ci]").forEach(b => b.addEventListener("click", () => doCheckIn(Number(b.dataset.ci), refreshCiLists)));
+  box.querySelectorAll("[data-mark]").forEach(b => b.addEventListener("click", () => doCheckIn(Number(b.dataset.mark), refreshCiLists)));
+  box.querySelectorAll("[data-unmark]").forEach(b => b.addEventListener("click", async () => {
+    await api("/api/checkin/today/" + b.dataset.unmark, { method: "DELETE" });
+    toast("Marked as not present.");
+    await refreshCiLists();
+  }));
+}
+
+/* ================= RENEWAL ================= */
+async function renderRenewal(){
+  const el = $("#screen-renewal");
+  const r = await api("/api/renewals");
+  if (!r.ok) return;
+  DATA.renewals = r.data;
+  const s = r.data.stats;
+  el.innerHTML =
+    "<h1 style='font-size:24px;margin-bottom:6px'>Membership <span class='grad-text'>Renewals</span></h1>" +
+    '<p class="sub" style="margin-bottom:16px">Renew on time and members stay. This list makes itself — no register book needed.</p>' +
+    '<div class="stat-grid" style="grid-template-columns:1fr 1fr 1fr;gap:9px">' +
+      statCard(s.due_count, "Due in 7 days") +
+      statCard('<span class="num-red">' + s.expired_count + "</span>", "Expired") +
+      statCard(inr(s.renewed_this_month), "Renewed this month") +
+    "</div>" +
+    searchHTML("renewal", "Search renewals… (name or code)") +
+    '<div class="section-head"><h2>Due in 7 Days</h2></div><p class="showing" id="rn-due-showing"></p><div id="rn-due"></div>' +
+    '<div class="section-head"><h2 style="color:var(--red)">Expired</h2></div><p class="showing" id="rn-exp-showing"></p><div id="rn-expired"></div>' +
+    '<div class="section-head"><h2>Renewal History</h2></div><div id="rn-history">' +
+    (r.data.history.length
+      ? r.data.history.map(h =>
+          '<div class="row-card"><div class="avatar">✓</div><div class="row-main"><div class="row-name">' + esc(h.member_name) + '</div>' +
+          '<div class="row-sub">' + esc(h.plan) + " · Renewed on " + esc(fmtDate(h.date)) + " · New expiry " + esc(fmtDate(h.new_expiry)) + '</div></div>' +
+          '<div class="amount">' + inr(h.amount) + "</div></div>").join("")
+      : emptyHTML("🧾", "No renewals yet", "When you renew a member, the record will appear here.")) +
+    "</div>";
+  const inp = $("#search-renewal");
+  inp.addEventListener("input", () => { SEARCH.renewal = inp.value; paintRenewalLists(); });
+  const clr = $("#clear-renewal");
+  if (clr) clr.addEventListener("click", () => { SEARCH.renewal = ""; renderRenewal(); });
+  paintRenewalLists();
+}
+function renewalRow(m, expiredList){
+  const daysText = expiredList
+    ? '<span class="days-left bad">Expired ' + Math.abs(m.days_left) + "d ago</span>"
+    : '<span class="days-left' + (m.days_left <= 3 ? " bad" : "") + '">' + (m.days_left === 0 ? "Expires today" : m.days_left + " days left") + "</span>";
+  return '<div class="row-card" style="flex-wrap:wrap"><div class="avatar">' + esc(initials(m.name)) + '</div>' +
+    '<div class="row-main"><div class="row-name">' + esc(m.name) + '</div>' +
+    '<div class="row-sub">' + esc(m.plan) + " · Expires " + esc(fmtDate(m.expiry_date)) + " · " + inr(m.amount) + " · " + esc(m.code) + "</div></div>" +
+    '<div style="text-align:right"><div>' + daysText + '</div>' +
+    '<button class="btn btn-grad btn-sm" data-renew="' + m.id + '" type="button" style="margin-top:7px">Renew</button></div>' +
+    (MODE === "manual"
+      ? '<div style="flex-basis:100%;display:flex;gap:9px;margin-top:11px"><input class="inp" type="number" min="1" max="3650" id="cd-' + m.id + '" placeholder="Custom days (e.g. 45)" style="flex:1;min-height:44px">' +
+        '<button class="btn btn-ghost btn-sm" data-extend="' + m.id + '" type="button">Mark Paid / Extend</button></div>'
+      : "") +
+    "</div>";
+}
+function paintRenewalLists(){
+  const due = $("#rn-due"), exp = $("#rn-expired");
+  if (!due || !DATA.renewals) return;
+  const q = SEARCH.renewal;
+  const dueHits = DATA.renewals.due.filter(m => matchQ(m, q));
+  const expHits = DATA.renewals.expired.filter(m => matchQ(m, q));
+  const dsh = $("#rn-due-showing"), esh = $("#rn-exp-showing");
+  if (dsh) dsh.textContent = q ? "Showing " + dueHits.length + " of " + DATA.renewals.due.length : "";
+  if (esh) esh.textContent = q ? "Showing " + expHits.length + " of " + DATA.renewals.expired.length : "";
+  due.innerHTML = dueHits.length ? dueHits.map(m => renewalRow(m, false)).join("")
+    : (q ? noMatchHTML(q) : emptyHTML("✅", "Nothing due this week", "No membership is expiring in the next 7 days."));
+  exp.innerHTML = expHits.length ? expHits.map(m => renewalRow(m, true)).join("")
+    : (q ? noMatchHTML(q) : emptyHTML("👍", "No expired memberships", "Every member's plan is active right now."));
+  due.querySelectorAll("[data-renew]").forEach(b => b.addEventListener("click", () => doRenew(Number(b.dataset.renew), null)));
+  exp.querySelectorAll("[data-renew]").forEach(b => b.addEventListener("click", () => doRenew(Number(b.dataset.renew), null)));
+  due.querySelectorAll("[data-extend]").forEach(b => b.addEventListener("click", () => doExtend(Number(b.dataset.extend))));
+  exp.querySelectorAll("[data-extend]").forEach(b => b.addEventListener("click", () => doExtend(Number(b.dataset.extend))));
+}
+async function doRenew(id, customDays){
+  const body = customDays ? { custom_days: customDays } : {};
+  const r = await api("/api/renewals/" + id + "/renew", { method: "POST", body: JSON.stringify(body) });
+  if (r.ok) { toast(r.data.message); await renderRenewal(); }
+  else toast(r.data.detail || "Renewal failed. Please try again.");
+}
+async function doExtend(id){
+  const inp = $("#cd-" + id);
+  const days = parseInt(inp && inp.value, 10);
+  if (!days || days < 1) { toast("Please type the number of days first — for example 45."); return; }
+  await doRenew(id, days);
+}
+
+/* ================= ADD-ONS ================= */
+async function renderAddons(){
+  const el = $("#screen-addons");
+  const [addons, members] = await Promise.all([api("/api/addons"), api("/api/members")]);
+  if (!addons.ok) return;
+  DATA.addons = addons.data; DATA.members = members.data.members || [];
+  el.innerHTML =
+    "<h1 style='font-size:24px;margin-bottom:6px'>Add-On <span class='grad-text'>Services</span></h1>" +
+    '<p class="sub" style="margin-bottom:16px">Extra services members can buy on top of their plan — extra income for the gym, every month.</p>' +
+    '<div class="card" style="margin-bottom:16px;text-align:center"><div class="small" style="font-weight:700;letter-spacing:.05em">ADD-ON REVENUE / MONTH</div>' +
+    '<div style="font-size:34px;font-weight:900;margin-top:4px" class="grad-text">' + inr(addons.data.revenue_month) + "</div></div>" +
+    '<div class="shortcut-grid" style="grid-template-columns:1fr 1fr">' +
+    addons.data.catalog.map(a =>
+      '<div class="card" style="margin:0"><div style="font-size:26px">' + a.icon + '</div>' +
+      '<div style="font-weight:800;font-size:15.5px;margin-top:7px;line-height:1.3">' + esc(a.name) + "</div>" +
+      '<div class="row-sub">' + inr(a.price) + "/month</div>" +
+      '<div class="row-sub" style="margin:7px 0 11px">' + a.member_count + " member" + (a.member_count === 1 ? "" : "s") + " using it</div>" +
+      '<button class="btn btn-grad btn-sm" data-assign="' + a.id + '" type="button" style="width:100%">Assign to Member</button></div>'
+    ).join("") + "</div>" +
+    '<div class="section-head"><h2>Active Subscriptions</h2><span class="small">' + addons.data.active.length + " active</span></div>" +
+    searchHTML("addons", "Search subscriptions… (member name)") +
+    '<p class="showing" id="ad-showing"></p><div id="ad-subs"></div>';
+  el.querySelectorAll("[data-assign]").forEach(b => b.addEventListener("click", () => openAssignModal(b.dataset.assign)));
+  const inp = $("#search-addons");
+  inp.addEventListener("input", () => { SEARCH.addons = inp.value; paintSubs(); });
+  const clr = $("#clear-addons");
+  if (clr) clr.addEventListener("click", () => { SEARCH.addons = ""; renderAddons(); });
+  paintSubs();
+}
+function paintSubs(){
+  const box = $("#ad-subs");
+  if (!box || !DATA.addons) return;
+  const q = SEARCH.addons.trim().toLowerCase();
+  const hits = DATA.addons.active.filter(s => !q || s.member_name.toLowerCase().includes(q) || s.addon_name.toLowerCase().includes(q));
+  const sh = $("#ad-showing");
+  if (sh) sh.textContent = q ? "Showing " + hits.length + " of " + DATA.addons.active.length + " subscriptions" : "";
+  if (!hits.length) {
+    box.innerHTML = q ? noMatchHTML(SEARCH.addons) : emptyHTML("➕", "No add-ons assigned yet", "Tap “Assign to Member” on any service above to get started.");
+    return;
+  }
+  box.innerHTML = hits.map(s =>
+    '<div class="row-card"><div class="avatar">' + esc(initials(s.member_name)) + '</div>' +
+    '<div class="row-main"><div class="row-name">' + esc(s.member_name) + '</div><div class="row-sub">' + esc(s.addon_name) + "</div></div>" +
+    '<div class="amount">' + inr(s.price) + '<span class="small">/mo</span></div>' +
+    '<button class="x-btn" data-unsub="' + s.sub_id + '" type="button" aria-label="Remove add-on">✕</button></div>'
+  ).join("");
+  box.querySelectorAll("[data-unsub]").forEach(b => b.addEventListener("click", async () => {
+    const r = await api("/api/addons/subs/" + b.dataset.unsub, { method: "DELETE" });
+    if (r.ok) { toast("Add-on removed."); await renderAddons(); }
+    else toast(r.data.detail || "Could not remove. Please try again.");
+  }));
+}
+
+/* ================= Modals & QR ================= */
+function openModal(html){
+  $("#modal-root").innerHTML = '<div class="modal-overlay" id="modal-overlay"><div class="modal-card">' + html + "</div></div>";
+  $("#modal-overlay").addEventListener("click", (e) => { if (e.target.id === "modal-overlay") closeModal(); });
+}
+function closeModal(){ $("#modal-root").innerHTML = ""; }
+function drawQR(el, text){
+  if (!el) return;
+  el.innerHTML = "";
+  if (window.QRCode) {
+    try { new QRCode(el, { text, width: 180, height: 180, colorDark: "#0a0a0b", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M }); return; }
+    catch (e) { /* fall through to canvas fallback */ }
+  }
+  // Offline fallback: deterministic QR-look pattern on canvas + the code stays readable as text below.
+  const N = 25, size = 180, cell = size / N;
+  const canvas = document.createElement("canvas");
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, size, size);
+  let seed = 0;
+  for (let i = 0; i < text.length; i++) seed = (seed * 31 + text.charCodeAt(i)) >>> 0;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  ctx.fillStyle = "#0a0a0b";
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const inFinder = (x < 8 && y < 8) || (x > N - 9 && y < 8) || (x < 8 && y > N - 9);
+    if (!inFinder && rnd() > 0.52) ctx.fillRect(x * cell, y * cell, cell, cell);
+  }
+  const finder = (fx, fy) => {
+    ctx.fillStyle = "#0a0a0b"; ctx.fillRect(fx * cell, fy * cell, 7 * cell, 7 * cell);
+    ctx.fillStyle = "#ffffff"; ctx.fillRect((fx + 1) * cell, (fy + 1) * cell, 5 * cell, 5 * cell);
+    ctx.fillStyle = "#0a0a0b"; ctx.fillRect((fx + 2) * cell, (fy + 2) * cell, 3 * cell, 3 * cell);
+  };
+  finder(0, 0); finder(N - 7, 0); finder(0, N - 7);
+  el.appendChild(canvas);
+}
+function openQRModal(memberId){
+  const m = DATA.members.find(x => x.id === memberId);
+  if (!m) return;
+  openModal(
+    "<h3>" + esc(m.name) + "</h3>" +
+    '<p class="small" style="margin-bottom:14px">Member code · ' + esc(m.code) + " · " + esc(m.plan) + " plan · Expires " + esc(fmtDate(m.expiry_date)) + "</p>" +
+    '<div class="qr-box" id="modal-qr"></div>' +
+    '<div style="text-align:center;font-weight:900;font-size:21px;letter-spacing:.16em;margin-top:13px">' + esc(m.code) + "</div>" +
+    (m.addons.length ? '<p class="small" style="text-align:center;margin-top:7px">Add-ons: ' + esc(m.addons.map(a => a.addon_name).join(", ")) + "</p>" : "") +
+    '<p class="small" style="text-align:center;margin-top:9px">The member shows this code at the door to check in.</p>' +
+    '<button class="btn btn-ghost" id="modal-close" type="button" style="width:100%;margin-top:15px">Close</button>'
+  );
+  drawQR($("#modal-qr"), m.code);
+  $("#modal-close").addEventListener("click", closeModal);
+}
+function openAssignModal(addonId){
+  const addon = DATA.addons.catalog.find(a => a.id === addonId);
+  if (!addon) return;
+  const have = new Set(DATA.addons.active.filter(s => s.addon_id === addonId).map(s => s.member_id));
+  openModal(
+    "<h3>Assign " + esc(addon.name) + "</h3>" +
+    '<p class="small" style="margin-bottom:13px">' + inr(addon.price) + "/month · Tap a member to assign it.</p>" +
+    '<div class="search-wrap"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>' +
+    '<input type="text" id="assign-search" placeholder="Search members… (name or code)" maxlength="60" autocomplete="off"></div>' +
+    '<div id="assign-list"></div>' +
+    '<button class="btn btn-ghost" id="modal-close" type="button" style="width:100%;margin-top:6px">Cancel</button>'
+  );
+  const paint = () => {
+    const q = ($("#assign-search").value || "").trim().toLowerCase();
+    const hits = DATA.members.filter(m => !q || m.name.toLowerCase().includes(q) || m.code.toLowerCase().includes(q));
+    const box = $("#assign-list");
+    box.innerHTML = hits.length ? hits.map(m =>
+      '<div class="row-card"><div class="avatar">' + esc(initials(m.name)) + '</div>' +
+      '<div class="row-main"><div class="row-name">' + esc(m.name) + '</div><div class="row-sub">' + esc(m.code) + "</div></div>" +
+      (have.has(m.id)
+        ? '<span class="small" style="font-weight:700">Already added</span>'
+        : '<button class="chip-mark" data-assign-member="' + m.id + '" type="button">Assign</button>') +
+      "</div>"
+    ).join("") : noMatchHTML(q);
+    box.querySelectorAll("[data-assign-member]").forEach(b => b.addEventListener("click", async () => {
+      const r = await api("/api/addons/assign", { method: "POST", body: JSON.stringify({ member_id: Number(b.dataset.assignMember), addon_id: addonId }) });
+      if (r.ok) { toast(r.data.message); closeModal(); await renderAddons(); }
+      else toast(r.data.detail || "Could not assign. Please try again.");
+    }));
+  };
+  $("#assign-search").addEventListener("input", paint);
+  $("#modal-close").addEventListener("click", closeModal);
+  paint();
+}
+
+/* ================= Entry flow: signup / details / upgrade ================= */
+let PLANS_CACHE = null;
+let UP_PERIOD = "monthly";
+let PLAN_PERIOD = null;
+
+async function loadPlans(){
+  if (PLANS_CACHE) return PLANS_CACHE;
+  const r = await api("/api/plans").catch(() => null);
+  if (r && r.ok) PLANS_CACHE = r.data.plans;
+  return PLANS_CACHE || [];
+}
+function planPrice(p, period){ return period === "monthly" ? p.monthly : p.yearly; }
+function planCardHTML(p, period, btnLabel, btnOff){
+  const pop = p.badge ? " pop" : "";
+  const badge = p.badge ? '<span class="plan-badge">' + esc(p.badge).toUpperCase() + "</span>" : "";
+  const feats = (p.features || []).map(f => "<li>" + esc(f) + "</li>").join("");
+  return '<div class="plan-card' + pop + '">' + badge +
+    '<div style="display:flex;justify-content:space-between;align-items:baseline"><strong style="font-size:17px">' + esc(p.name) + '</strong>' +
+    '<span style="font-size:22px;font-weight:800">₹' + planPrice(p, period).toLocaleString("en-IN") + '<span class="small"> /' + (period === "monthly" ? "month" : "year") + "</span></span></div>" +
+    '<ul class="plan-feats">' + feats + "</ul>" +
+    '<button type="button" class="btn ' + (p.badge ? "btn-grad" : "btn-deep") + '" data-choose="' + esc(p.id) + '"' + (btnOff ? " disabled" : "") + ">" + esc(btnLabel) + "</button></div>";
+}
+
+/* ---- UPI QR payment panel (Upgrade flow + Plan & Billing) ---- */
+let PAY_CTX = null; // { planId, period, onDone }
+function openPaymentPanel(planId, period, onDone){
+  const p = (PLANS_CACHE || []).find(x => x.id === planId);
+  if (!p) { toast("Plan details could not load. Please try again."); return; }
+  PAY_CTX = { planId, period, onDone };
+  const amount = planPrice(p, period);
+  const perLabel = period === "monthly" ? "Monthly" : "Yearly";
+  openModal(
+    "<h3>Pay for " + esc(p.name) + "</h3>" +
+    '<p class="small">' + perLabel + ' plan · Pay with any UPI app.</p>' +
+    '<div class="pay-qr-card"><img src="/payment-qr.png" alt="UPI payment QR code" id="pay-qr-img">' +
+    '<div class="pay-qr-fallback" id="pay-qr-fallback">Payment QR<br>coming soon</div></div>' +
+    '<p style="text-align:center;font-size:14px;margin-top:10px">Scan with any UPI app — <strong>GPay, PhonePe, Paytm</strong></p>' +
+    '<div style="text-align:center;font-size:27px;font-weight:900;margin:8px 0 2px">₹' + amount.toLocaleString("en-IN") + "</div>" +
+    '<p class="small" style="text-align:center">' + esc(p.name) + " plan · " + perLabel + "</p>" +
+    '<button type="button" class="btn btn-grad" id="pay-done" style="margin-top:16px">I Have Paid ✓</button>' +
+    '<button type="button" class="btn btn-ghost" id="pay-later" style="width:100%;margin-top:10px">Pay Later</button>'
+  );
+  const img = $("#pay-qr-img");
+  img.addEventListener("error", () => { img.style.display = "none"; $("#pay-qr-fallback").style.display = "block"; });
+  $("#pay-done").addEventListener("click", () => submitPayment("/api/subscription/confirm-payment"));
+  $("#pay-later").addEventListener("click", () => submitPayment("/api/subscription/pay-later"));
+}
+async function submitPayment(path){
+  if (!PAY_CTX) return;
+  const doneBtn = $("#pay-done"), laterBtn = $("#pay-later");
+  if (doneBtn) doneBtn.disabled = true;
+  if (laterBtn) laterBtn.disabled = true;
+  try {
+    const r = await api(path, { method: "POST", body: JSON.stringify({ plan_id: PAY_CTX.planId, period: PAY_CTX.period }) });
+    if (r.ok) {
+      if (ME) ME.plan_chosen = true;
+      const cb = PAY_CTX.onDone;
+      closeModal();
+      toast(r.data.message || "Done!");
+      if (cb) await cb(r.data);
+    } else {
+      toast(r.data.detail || "Something went wrong. Please try again.");
+      if (doneBtn) doneBtn.disabled = false;
+      if (laterBtn) laterBtn.disabled = false;
+    }
+  } catch (e) {
+    if (doneBtn) doneBtn.disabled = false;
+    if (laterBtn) laterBtn.disabled = false;
+  }
+}
+function showFieldErrs(scope, fields){
+  document.querySelectorAll('[id^="err-' + scope + '-"]').forEach(e => { e.textContent = ""; e.classList.remove("show"); });
+  if (!fields) return;
+  Object.entries(fields).forEach(([k, v]) => {
+    const e = document.getElementById("err-" + scope + "-" + k);
+    if (e) { e.textContent = v; e.classList.add("show"); }
+  });
+}
+function digitsOnly(v){ let d = String(v || "").replace(/\D/g, ""); if (d.length === 12 && d.startsWith("91")) d = d.slice(2); if (d.length === 11 && d.startsWith("0")) d = d.slice(1); return d; }
+
+/* ---- signup ---- */
+$("#go-signup").addEventListener("click", () => showView("signup"));
+$("#go-login").addEventListener("click", () => showView("login"));
+$("#signup-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const body = {
+    owner_name: $("#s-owner").value.trim(),
+    gym_name: $("#s-gym").value.trim(),
+    email: $("#s-email").value.trim(),
+    mobile: $("#s-mobile").value.trim(),
+    password: $("#s-password").value,
+  };
+  const fields = {};
+  if (body.owner_name.length < 2) fields.owner_name = "Please enter your full name.";
+  if (body.gym_name.length < 2) fields.gym_name = "Please enter your gym's name.";
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.email)) fields.email = "Please enter a correct email address.";
+  if (digitsOnly(body.mobile).length !== 10) fields.mobile = "Please enter a 10-digit mobile number.";
+  if (body.password.length < 6) fields.password = "Please choose a password of at least 6 characters.";
+  showFieldErrs("s", fields);
+  const errBox = $("#signup-error");
+  errBox.classList.add("hidden");
+  if (Object.keys(fields).length) { errBox.textContent = "Please check the highlighted fields."; errBox.classList.remove("hidden"); return; }
+  const btn = $("#signup-btn");
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Creating your account…';
+  try {
+    const r = await api("/api/signup", { method: "POST", body: JSON.stringify(body) });
+    if (r.ok) {
+      $("#s-password").value = "";
+      toast("Account created! Now tell us about your gym.");
+      await routeAfterAuth();
+    } else {
+      if (r.data.fields) showFieldErrs("s", r.data.fields);
+      errBox.textContent = r.data.detail || "Sign-up failed. Please try again.";
+      errBox.classList.remove("hidden");
+    }
+  } finally { btn.disabled = false; btn.textContent = "Create Account →"; }
+});
+
+/* ---- details (entry flow + Settings edit) ---- */
+let DETAILS_EDIT = false;
+async function openDetails(editMode){
+  DETAILS_EDIT = !!editMode;
+  $("#details-back").classList.toggle("hidden", !DETAILS_EDIT);
+  $("#details-save").textContent = DETAILS_EDIT ? "Save Details" : "Save & Continue →";
+  $("#details-error").classList.add("hidden");
+  showFieldErrs("d", {});
+  showView("details");
+  const r = await api("/api/details").catch(() => null);
+  if (r && r.ok) {
+    const d = r.data;
+    $("#d-gym-name").value = d.gym_name || "";
+    $("#d-address").value = d.gym_address || "";
+    $("#d-city").value = d.gym_city || "";
+    $("#d-phone").value = d.gym_phone || "";
+    $("#d-year").value = d.opening_year || "";
+    $("#d-owner").value = d.owner_name || "";
+    $("#d-mobile").value = d.mobile || "";
+    $("#d-email").value = d.email || "";
+    $("#d-whatsapp").value = d.whatsapp || "";
+  }
+}
+$("#details-back").addEventListener("click", () => { showView("app"); switchTab("plan"); });
+$("#details-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const yearRaw = $("#d-year").value.trim();
+  const body = {
+    gym_name: $("#d-gym-name").value.trim(),
+    gym_address: $("#d-address").value.trim(),
+    gym_city: $("#d-city").value.trim(),
+    gym_phone: $("#d-phone").value.trim(),
+    opening_year: yearRaw ? parseInt(yearRaw, 10) : null,
+    owner_name: $("#d-owner").value.trim(),
+    mobile: $("#d-mobile").value.trim(),
+    whatsapp: $("#d-whatsapp").value.trim(),
+  };
+  const fields = {};
+  if (body.gym_name.length < 2) fields.gym_name = "Please enter your gym's name.";
+  if (body.gym_address.length < 5) fields.gym_address = "Please enter your gym's full address.";
+  if (body.gym_city.length < 2) fields.gym_city = "Please enter your city.";
+  if (digitsOnly(body.gym_phone).length !== 10) fields.gym_phone = "Please enter a 10-digit phone number for the gym.";
+  if (body.opening_year !== null && !(body.opening_year >= 1950 && body.opening_year <= new Date().getFullYear())) fields.opening_year = "Please enter a correct year (for example 2019).";
+  if (body.owner_name.length < 2) fields.owner_name = "Please enter your full name.";
+  if (digitsOnly(body.mobile).length !== 10) fields.mobile = "Please enter your 10-digit mobile number.";
+  if (body.whatsapp && digitsOnly(body.whatsapp).length !== 10) fields.whatsapp = "Please enter a 10-digit WhatsApp number, or leave it empty.";
+  showFieldErrs("d", fields);
+  const errBox = $("#details-error");
+  errBox.classList.add("hidden");
+  if (Object.keys(fields).length) { errBox.textContent = "Please check the highlighted fields."; errBox.classList.remove("hidden"); return; }
+  const btn = $("#details-save");
+  btn.disabled = true;
+  try {
+    const r = await api("/api/details", { method: "PUT", body: JSON.stringify(body) });
+    if (r.ok) {
+      ME = Object.assign({}, ME, r.data);
+      setGymName();
+      toast("Your details are saved. Thank you!");
+      if (DETAILS_EDIT) { showView("app"); await switchTab("plan"); }
+      else await routeAfterAuth();
+    } else {
+      if (r.data.fields) showFieldErrs("d", r.data.fields);
+      errBox.textContent = r.data.detail || "Saving failed. Please try again.";
+      errBox.classList.remove("hidden");
+    }
+  } finally { btn.disabled = false; btn.textContent = DETAILS_EDIT ? "Save Details" : "Save & Continue →"; }
+});
+
+/* ---- upgrade / choose plan ---- */
+async function openUpgrade(){
+  UP_PERIOD = "monthly";
+  showView("upgrade");
+  await renderUpgrade();
+}
+async function renderUpgrade(){
+  $("#up-monthly").classList.toggle("on", UP_PERIOD === "monthly");
+  $("#up-yearly").classList.toggle("on", UP_PERIOD === "yearly");
+  const plans = await loadPlans();
+  $("#upgrade-cards").innerHTML = plans.map(p => planCardHTML(p, UP_PERIOD, "Choose " + p.name, false)).join("");
+  $$("#upgrade-cards [data-choose]").forEach(b => b.addEventListener("click", () => choosePlan(b.dataset.choose)));
+}
+$("#up-monthly").addEventListener("click", () => { UP_PERIOD = "monthly"; renderUpgrade(); });
+$("#up-yearly").addEventListener("click", () => { UP_PERIOD = "yearly"; renderUpgrade(); });
+async function choosePlan(planId){
+  await loadPlans(); // make sure the panel can price the plan
+  openPaymentPanel(planId, UP_PERIOD, async () => { await routeAfterAuth(); });
+}
+
+/* ================= PLAN & BILLING ================= */
+async function renderPlan(){
+  const el = $("#screen-plan");
+  const [st, plans] = await Promise.all([api("/api/plan"), loadPlans()]);
+  if (!st.ok) return;
+  const s = st.data;
+  if (PLAN_PERIOD === null) PLAN_PERIOD = s.period;
+  const cur = plans.find(p => p.id === s.plan_id) || {};
+  const used = s.usage.members_used, limit = s.usage.member_limit;
+  const pct = limit ? Math.min(100, Math.round(used / limit * 100)) : 100;
+  const statusLabel = s.payment_status === "payment_pending" ? "Payment pending"
+    : (s.payment_status === "active" ? "Active" : s.status);
+  const lp = s.last_payment;
+  const lpPeriod = lp ? (lp.period === "monthly" ? "Monthly" : "Yearly") : "";
+  let payBlock = "";
+  if (s.payment_status === "payment_pending") {
+    payBlock =
+      '<p style="margin-top:12px"><span class="badge-pending">⚠ Payment pending</span></p>' +
+      (lp ? '<p class="small" style="margin-top:7px">' + inr(lp.amount) + " for the " + esc(lp.plan_name) + " plan (" + lpPeriod + ") is still to be paid.</p>" : "") +
+      '<button type="button" class="btn btn-grad" id="plan-paynow" style="margin-top:12px">Pay Now — ' + inr(s.price) + "</button>";
+  } else if (lp && lp.status === "paid") {
+    payBlock =
+      '<p style="margin-top:12px"><span class="badge-active">✓ Active</span></p>' +
+      '<p class="small" style="margin-top:7px">Paid via UPI QR · ' + inr(lp.amount) + " · Active since " + esc(fmtFull(s.since || lp.date)) + "</p>" +
+      '<p class="small" style="margin-top:3px">Last payment: ' + esc(lp.plan_name) + " (" + lpPeriod + ") · " + inr(lp.amount) + " via UPI QR on " + esc(fmtFull(lp.date)) + "</p>";
+  }
+  el.innerHTML =
+    "<h1>Plan &amp; Billing 💎</h1>" +
+    '<p class="sub" style="margin:6px 0 18px">Your subscription for this app — change it anytime.</p>' +
+    '<div class="plan-card pop"><span class="plan-badge">CURRENT PLAN</span>' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline"><strong style="font-size:18px">' + esc(cur.name || s.plan_id) + " Plan</strong>" +
+      '<span style="font-size:22px;font-weight:800">₹' + Number(s.price).toLocaleString("en-IN") + '<span class="small"> /' + (s.period === "monthly" ? "month" : "year") + "</span></span></div>" +
+      '<p class="small" style="margin-top:6px">Billing: ' + (s.period === "monthly" ? "Monthly" : "Yearly") + " · Status: " + esc(statusLabel) + "</p>" +
+      payBlock +
+      '<p style="font-size:14px;margin-top:14px"><strong>' + used + "</strong> members" + (limit ? " of <strong>" + limit + "</strong> on your plan" : " · <strong>Unlimited</strong> members on your plan") + "</p>" +
+      '<div class="usage-track"><div class="usage-fill" style="width:' + pct + '%"></div></div>' +
+    "</div>" +
+    '<div id="plan-msg"></div>' +
+    '<div class="seg" style="margin:4px 0 16px"><button type="button" data-pper="monthly" class="' + (PLAN_PERIOD === "monthly" ? "on" : "") + '">Monthly</button>' +
+    '<button type="button" data-pper="yearly" class="' + (PLAN_PERIOD === "yearly" ? "on" : "") + '">Yearly · 2 months free 🎉</button></div>' +
+    plans.map(p => {
+      const isCur = p.id === s.plan_id && PLAN_PERIOD === s.period;
+      const label = isCur ? "✓ Current Plan" : (p.id === s.plan_id ? "Switch to " + (PLAN_PERIOD === "monthly" ? "Monthly" : "Yearly") : "Switch to " + p.name);
+      return planCardHTML(p, PLAN_PERIOD, label, isCur);
+    }).join("") +
+    '<p class="small" style="text-align:center">Prices in INR. GST extra as applicable. Cancel anytime.<br>Plan changes are paid by UPI QR — scan, pay, tap “I Have Paid”. Your last payment is shown above.</p>' +
+    '<div class="section-head"><h2>Settings ⚙️</h2></div>' +
+    '<div class="card"><strong style="font-size:15px">Gym &amp; Owner Details</strong>' +
+    '<p class="small" style="margin:6px 0 12px">Your gym name, address and your contact details.</p>' +
+    '<button type="button" class="btn btn-ghost" id="plan-settings-btn">Edit Gym &amp; Owner Details</button></div>';
+  el.querySelectorAll("[data-pper]").forEach(b => b.addEventListener("click", () => { PLAN_PERIOD = b.dataset.pper; renderPlan(); }));
+  el.querySelectorAll("[data-choose]").forEach(b => b.addEventListener("click", () => {
+    openPaymentPanel(b.dataset.choose, PLAN_PERIOD, async (data) => {
+      if (ME) ME.plan_chosen = true;
+      await renderPlan();
+      const m = $("#plan-msg");
+      if (m) {
+        if (data.payment_status === "payment_pending") {
+          m.innerHTML = '<div class="hint-box" style="margin-bottom:14px">🕒 Saved! You are on the <strong>' + esc(data.plan.name) + "</strong> plan (" + (data.period === "monthly" ? "Monthly" : "Yearly") + ") with <strong>payment pending</strong> — pay anytime with the Pay Now button above.</div>";
+        } else {
+          const lp2 = data.last_payment;
+          m.innerHTML = '<div class="hint-box" style="margin-bottom:14px">✅ Paid via UPI QR! You are now on the <strong>' + esc(data.plan.name) + "</strong> plan (" + (data.period === "monthly" ? "Monthly" : "Yearly") + ")" + (lp2 ? " · " + inr(lp2.amount) : "") + " · Active since " + esc(fmtFull(data.since)) + ".</div>";
+        }
+      }
+    });
+  }));
+  const pn = $("#plan-paynow");
+  if (pn) pn.addEventListener("click", () => openPaymentPanel(s.plan_id, s.period, async () => { await renderPlan(); }));
+  const sb = $("#plan-settings-btn");
+  if (sb) sb.addEventListener("click", () => openDetails(true));
+}
+
+/* ---------------- Init ---------------- */
+async function initApp(){
+  const mode = await api("/api/mode").catch(() => null);
+  if (mode && mode.ok) MODE = mode.data.mode;
+  syncModeUI();
+  await switchTab("home");
+}
+(async function boot(){
+  // Public UI config: the demo-login hint can be hidden on public servers
+  // with SHOW_DEMO_HINT=false.
+  try {
+    const cfg = await fetch("/api/config").then(r => r.json());
+    if (cfg && cfg.show_demo_hint === false) $("#demo-hint").classList.add("hidden");
+  } catch (e) { /* hint stays visible if config cannot load */ }
+  try {
+    await routeAfterAuth();
+  } catch (e) { showLogin(); }
+})();
+</script>
+</body>
+</html>

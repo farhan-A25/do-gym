@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.db
+*.db-*
+.env
+.device-code
+logs/
+backups/
+preview/

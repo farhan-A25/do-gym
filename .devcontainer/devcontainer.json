@@ -1,0 +1,8 @@
+{
+  "name": "Do Gym Demo",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "postCreateCommand": "pip install -r backend/requirements.txt",
+  "postStartCommand": "cd backend && nohup python3 -m uvicorn main:app --host 0.0.0.0 --port 8201 > /tmp/dogym.log 2>&1 &",
+  "forwardPorts": [8201],
+  "portsAttributes": { "8201": { "label": "Do Gym App", "onAutoForward": "openBrowser" } }
+}
