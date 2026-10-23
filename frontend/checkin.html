@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Check In — __GYM_NAME__</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#000000; --bg2:#0a0a0b; --card:#101012; --card2:#17171b;
+  --border:rgba(255,255,255,.07);
+  --blue:#0a84ff;
+  --grad:linear-gradient(135deg,#0a84ff 0%,#2ea8ff 52%,#0060df 100%);
+  --red:#ff3b3b; --red-soft:rgba(255,59,59,.12);
+  --text:#ffffff; --muted:#8e8e93; --muted2:#636366;
+  --radius:16px; --shadow:0 12px 32px rgba(0,0,0,.45);
+  --glow-blue:0 10px 28px rgba(10,132,255,.35);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:#000000 radial-gradient(900px 500px at 15% -5%,rgba(10,132,255,.10),transparent 60%),
+             radial-gradient(900px 500px at 90% 0%,rgba(10,132,255,.12),transparent 60%);
+  color:var(--text); min-height:100dvh;
+}
+.phone{max-width:430px;margin:0 auto;min-height:100dvh;background:linear-gradient(180deg,var(--bg2),var(--bg));display:flex;flex-direction:column;padding:34px 24px 30px}
+.logo-mark{width:64px;height:64px;border-radius:18px;overflow:hidden;display:flex;flex:none;box-shadow:var(--glow-blue);margin-bottom:20px}
+.logo-mark img{width:100%;height:100%;object-fit:cover;display:block}
+h1{font-size:27px;font-weight:900;letter-spacing:-.02em;line-height:1.15}
+.sub{color:var(--muted);font-size:13.5px;line-height:1.5;margin-top:6px}
+.grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--border);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);margin-top:22px}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:7px;letter-spacing:.02em}
+.field input{width:100%;background:#0a0a0b;border:1px solid var(--border);border-radius:12px;padding:14px;font-size:17px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;outline:none;transition:border-color .2s, box-shadow .2s}
+.field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(10,132,255,.22)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:13px 18px;font-size:15px;font-weight:700;transition:transform .15s, opacity .2s;min-height:52px;width:100%;font-family:inherit;cursor:pointer;border:none;color:#fff}
+.btn:active{transform:scale(.98)}
+.btn-grad{background:var(--grad);box-shadow:var(--glow-blue);margin-top:14px}
+.btn[disabled]{opacity:.6;cursor:default}
+.error-box{background:var(--red-soft);border:1px solid rgba(255,59,59,.4);color:#ffb4b4;border-radius:12px;padding:11px 13px;font-size:13.5px;margin-bottom:14px;line-height:1.45}
+.ok-ico{width:76px;height:76px;border-radius:50%;background:var(--grad);box-shadow:var(--glow-blue);display:flex;align-items:center;justify-content:center;font-size:38px;margin:6px auto 16px}
+.done-name{font-size:22px;font-weight:900;text-align:center;line-height:1.2}
+.done-detail{text-align:center;color:var(--muted);font-size:14px;line-height:1.6;margin-top:8px}
+.done-detail strong{color:#fff}
+.link-btn{display:block;margin:20px auto 0;background:none;border:none;color:#7cc7ff;font-size:13.5px;font-weight:600;font-family:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.note{font-size:12px;color:var(--muted2);text-align:center;margin-top:18px;line-height:1.55}
+.hidden{display:none !important}
+.spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;display:inline-block;animation:sp 0.7s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="logo-mark"><img src="/icon-512.png" alt=""></div>
+  <h1>__GYM_NAME__</h1>
+  <p class="sub">Member check-in</p>
+
+  <!-- Remembered-code visit: auto-submits on load -->
+  <div class="card hidden" id="state-auto">
+    <p style="text-align:center;font-size:15px;color:var(--muted)"><span class="spin"></span>&nbsp; Checking you in…</p>
+  </div>
+
+  <!-- First visit: enter the member code once -->
+  <div class="card hidden" id="state-form">
+    <div class="error-box hidden" id="form-error"></div>
+    <div class="field">
+      <label for="code">Your member code</label>
+      <input type="text" id="code" placeholder="e.g. PHG-001" maxlength="20" autocomplete="off" autocapitalize="characters" enterkeyhint="go">
+    </div>
+    <button class="btn btn-grad" id="go" type="button">Check In</button>
+    <p class="note">Your code is on your membership card — ask at the front desk if you don't know it. This phone will remember it, so next time you just scan and walk in.</p>
+  </div>
+
+  <!-- Result -->
+  <div class="card hidden" id="state-done">
+    <div class="ok-ico">✓</div>
+    <div class="done-name" id="done-title">You're in!</div>
+    <p class="done-detail" id="done-detail"></p>
+    <button class="link-btn" id="not-you" type="button">Not you? Use a different code</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var TOKEN = "__CHECKIN_TOKEN__";
+  var KEY = "dogym_member_code_" + TOKEN;
+  var autoEl = document.getElementById("state-auto");
+  var formEl = document.getElementById("state-form");
+  var doneEl = document.getElementById("state-done");
+  var errEl = document.getElementById("form-error");
+  var codeEl = document.getElementById("code");
+  var goEl = document.getElementById("go");
+
+  function show(el){
+    [autoEl, formEl, doneEl].forEach(function(x){ x.classList.add("hidden"); });
+    el.classList.remove("hidden");
+  }
+  function showForm(error){
+    if (error) { errEl.textContent = error; errEl.classList.remove("hidden"); }
+    else errEl.classList.add("hidden");
+    show(formEl);
+    codeEl.focus();
+  }
+  function showDone(data){
+    document.getElementById("done-title").textContent =
+      data.already_checked_in ? "Already checked in" : "You're in, " + firstName(data.member_name) + "!";
+    document.getElementById("done-detail").innerHTML =
+      esc(data.member_name) + " · " + esc(data.member_code || "") + "<br>" +
+      "Checked in at <strong>" + esc(data.time) + "</strong> · " + esc(data.date || "") + "<br>" + esc(data.gym_name || "");
+    show(doneEl);
+  }
+  function firstName(n){ return (n || "").split(" ")[0] || n; }
+  function esc(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function scan(code, wasAuto){
+    fetch("/api/checkin/scan", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ token: TOKEN, code: code })
+    }).then(function(r){
+      return r.json().then(function(data){ return { status: r.status, data: data }; });
+    }).then(function(res){
+      if (res.status === 200 && res.data.ok) {
+        try { localStorage.setItem(KEY, code); } catch (e) {}
+        showDone(res.data);
+      } else {
+        if (wasAuto) { try { localStorage.removeItem(KEY); } catch (e) {} }
+        showForm((res.data && res.data.detail) || "Check-in failed. Please try again.");
+      }
+    }).catch(function(){
+      showForm("Could not reach the gym server. Please check your connection and try again.");
+    }).finally(function(){
+      goEl.disabled = false;
+      goEl.textContent = "Check In";
+    });
+  }
+
+  goEl.addEventListener("click", function(){
+    var code = codeEl.value.trim().toUpperCase();
+    if (!code) { showForm("Please type your member code first — for example PHG-001."); return; }
+    goEl.disabled = true;
+    goEl.innerHTML = '<span class="spin"></span>&nbsp; Checking in…';
+    scan(code, false);
+  });
+  codeEl.addEventListener("keydown", function(e){ if (e.key === "Enter") goEl.click(); });
+  document.getElementById("not-you").addEventListener("click", function(){
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    codeEl.value = "";
+    showForm("");
+  });
+
+  // On load: a remembered code checks in by itself — scan, and you're in.
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) {}
+  if (saved) { show(autoEl); scan(saved, true); }
+  else showForm("");
+})();
+</script>
+</body>
+</html>

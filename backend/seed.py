@@ -11,7 +11,8 @@
 All dates are computed relative to *today* at seed time, so the demo is
 always correct whenever it is first run.
 """
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+import secrets
 
 from sqlalchemy.orm import Session
 
@@ -195,6 +196,26 @@ def seed_database(db: Session) -> None:
     db.add(models.Setting(key="plan_period", value="monthly"))
     db.add(models.Setting(key="plan_status", value="active (demo billing)"))
     db.add(models.Setting(key="plan_since", value=today.isoformat()))
+    db.add(models.Setting(key="payment_status", value="active"))
+    db.add(models.Setting(key="payment_method", value="upi_qr"))
+    db.add(models.Setting(key="payment_amount", value="1899"))
+    # The demo gym's subscription is backed by a real PAID payment record
+    # (Premium monthly, billing.py price) — the pay-first gate reads the
+    # latest payment row, so the demo owner is ACTIVE like any payer.
+    db.add(models.SubscriptionPayment(
+        user_id=user.id,
+        plan_id="pro",
+        plan_name="Premium",
+        period="monthly",
+        amount=1899,
+        method="upi_qr",
+        status="paid",
+        created_at=datetime.now(),
+    ))
+    # QR self check-in: a fresh per-gym token for the wall poster, and the
+    # member-code counter starting above the seeded PHG-001.. codes.
+    db.add(models.Setting(key="checkin_token", value=secrets.token_urlsafe(16)))
+    db.add(models.Setting(key="member_code_seq", value=str(len(SEED_MEMBERS))))
     db.commit()
     meta = db.query(models.Meta).filter(models.Meta.key == "seeded").first()
     if not meta:

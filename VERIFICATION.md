@@ -271,3 +271,465 @@ tile) was installed:
   the chrome DG icon sits cleanly in the brand header above the "Do Gym"
   wordmark, no distortion, no layout break. PASS.
 - DB and backend logic untouched.
+
+## 10. Google sign-in — "Continue with Google" (2026-10-22)
+
+Real OAuth 2.0 / OpenID Connect sign-in, standard library only (urllib) —
+no new dependencies, `requirements.txt` unchanged.
+
+- **New module `backend/google_auth.py`** — environment config read per
+  call (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APP_BASE_URL`,
+  default `http://127.0.0.1:8000`), `google_auth_enabled()` (true only
+  when both credentials are set), authorize-URL builder, code→token
+  exchange and userinfo fetch against Google's endpoints.
+- **`backend/security.py`** — signed OAuth `state` helpers using their own
+  itsdangerous salt (`phg-google-state-v1`, 10-minute max age), separate
+  from the session cookie.
+- **Routes (`backend/main.py`)**:
+  - `GET /api/auth/config` → `{"google_enabled": bool}` (public).
+  - `GET /auth/google` — disabled → 302 to `/?auth_error=…` (friendly,
+    controlled); enabled → 302 to `accounts.google.com` with client_id,
+    `redirect_uri={APP_BASE_URL}/auth/google/callback`, scope
+    `openid email profile` and a fresh signed state. Start is covered by
+    the existing login rate limiter.
+  - `GET /auth/google/callback` — verifies state, exchanges the code,
+    fetches userinfo, **requires `email_verified`**. Existing email →
+    logged in with the normal session cookie (shared `_apply_session_cookie`
+    helper, same Secure-flag logic). New email → account created
+    (owner name from the Google profile; password column filled with a
+    random unknown hash — Google-only account), `details_completed=false /
+    plan_chosen=false`, so the existing route guard takes the owner to the
+    Gym & Owner Details page, exactly like a fresh signup. Cancelled
+    consent, bad/expired state, unverified email and Google-side failures
+    all end in the same friendly `/?auth_error=…` redirect — never a 500.
+- **Frontend (`frontend/index.html`)** — white "Continue with Google"
+  button (official multicolour G as inline SVG) + "or" divider above the
+  email form on BOTH the login and signup cards, inside a `.google-auth`
+  block that starts `hidden`. On boot the page fetches `/api/auth/config`
+  and unhides the blocks only when `google_enabled` is true (fetch failure
+  = stays hidden). A `?auth_error=` return is shown in the login error box
+  and scrubbed from the URL. CSP unchanged (inline SVG, no new origins).
+- **Config/docs** — `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` /
+  `APP_BASE_URL` documented in `backend/.env.example`; README gained a
+  "Google sign-in" section (Cloud Console steps + the exact redirect URI
+  to register) and the variables joined the configuration table.
+- **Tests** — new `tests/test_google_auth.py` (11 tests, Google HTTP
+  mocked at the `main` module boundary): disabled config + friendly
+  redirects for both routes; enabled config; consent redirect parameters
+  (client id, redirect URI, scope, state); callback creating a new user
+  (email lower-cased, name from profile, entry-flow flags false, exactly
+  one row) and logging them in (`/api/me` 200); callback logging in the
+  existing demo owner without duplicating the account; unverified email,
+  bad state, Google failure and user-cancelled flows all → friendly
+  redirect with no account created.
+- **Result** — full suite **48 passed** (37 pre-existing + 11 new). Live
+  smoke test on temp databases: no keys → `google_enabled:false`, button
+  block rendered `hidden`, `/auth/google` 302 with the friendly message;
+  dummy keys → `google_enabled:true`, `/auth/google` 302 to
+  `accounts.google.com` with the correct redirect URI. The real
+  `backend/gym.db` was never touched (mtime unchanged across all runs).
+
+## 11. QR self check-in — fully automatic member scans + PHG member codes (2026-10-23)
+
+Built to the owner's explicit order: a member scans the QR poster on the
+gym wall with their OWN phone and the website updates by itself (member
+name, entry time, day) — the owner does nothing manually. Owner-side
+check-in by code remains as a backup.
+
+- **New module `backend/member_codes.py`** — both pieces of state live in
+  the settings table: (a) the member-code counter `member_code_seq`,
+  MONOTONIC — it only ever increases (bootstrapped from the highest code
+  in use), so a PHG number is never reissued after a deletion;
+  `next_member_code()` skips any code already held; `ensure_member_codes()`
+  backfills NULL/empty codes. (b) the gym's check-in token
+  (`secrets.token_urlsafe(16)`): lazily generated on first use, created
+  for the demo account at seed, compared with `secrets.compare_digest`.
+- **Public member flow** — `GET /checkin/{token}` (no login): unknown
+  token → themed member-facing 404 (`frontend/checkin-404.html`); valid
+  token → `frontend/checkin.html` with the gym's name + token injected —
+  mobile-first, same black/white/blue theme, gym icon. The member types
+  their PHG code once; the page stores it in `localStorage` (keyed by
+  token) and AUTO-SUBMITS on every later visit (scan → present), with a
+  "Not you? Use a different code" escape. `POST /api/checkin/scan`
+  {token, code}: idempotent per member per day (repeat scan returns the
+  first entry time, no second row), writes CheckIn with source "qr",
+  answers {member name, code, time, date, gym name}. Rate-limited
+  30/min per IP+token; a code only matches THIS gym's members and bad
+  codes get one generic friendly answer — no owner data beyond the gym
+  name is exposed.
+- **Model** — `CheckIn.source` ("owner" | "qr", default "owner"); a
+  startup migration adds the column to pre-existing databases
+  (verified against an old-format DB: rows preserved, source backfilled
+  to "owner"). Owner `POST /api/checkin` now tags source "owner";
+  `/api/checkins/today` exposes `source`, so the owner can see which
+  entries arrived by scan. Dashboard stats / Red List / today's list
+  needed no changes — they read the same table, verified by test.
+- **Owner endpoints** — `GET /api/gym/checkin-link` → {url, token,
+  gym_name} with url = {APP_BASE_URL}/checkin/{token} (APP_BASE_URL
+  reused from google_auth); `POST /api/gym/checkin-link/reset`
+  regenerates the token (old posters die immediately, audit-logged).
+  The QR Check-In screen's poster QR now encodes the FULL check-in URL,
+  shows the gym name + "Members: scan with your phone camera to check
+  in", the link text with a Copy button, and a "New Link" button.
+  Owner-side code box + Simulate Scan unchanged.
+- **Member creation** — new owner-only `POST /api/members`: validates
+  name/phone/plan (+ optional expiry, default = plan length) with the
+  app's field-error style and ALWAYS assigns the next PHG code
+  server-side (the schema has no code field; a client-sent code is
+  ignored — tested). Every member's code was already visible in the
+  member lists, search, quick-find card and the per-member QR modal
+  (owner hands the number to the member from there) — unchanged.
+  Seed now also sets `checkin_token` + `member_code_seq=48`.
+- **Tests** — new `tests/test_qr_checkin.py` (19 tests): link auth +
+  shape/stability; member page 200 + gym name for a valid token and a
+  friendly 404 for a bad one; scan happy path (row written with member,
+  date, time, source "qr"); owner views updated through the existing
+  APIs (Red List 32→31, checked-in 5→6); same-day idempotency (one row,
+  first time returned); lowercase code accepted; wrong code → friendly
+  404 + no row; wrong token → 404; rate limit → 429 after 30 attempts;
+  token reset retires the old token (page + scan) and the new one works;
+  all 48 seed members hold unique `PHG-NNN` codes; create assigns
+  PHG-049, PHG-050…; client-supplied code ignored; delete-then-create
+  does NOT reuse the number (049 deleted → next is 050); backfill gives
+  a code-less member the next number; a freshly created member can scan
+  in immediately. **Full suite: 67 passed (48 pre-existing + 19 new).**
+- **Live smoke test** (real uvicorn, temp DB): owner login →
+  checkin-link returned the APP_BASE_URL-based URL; member page 200
+  with gym name + form and no leftover placeholders; unauthenticated
+  scan of PHG-001 recorded "Rohit A. checked in at 11:51 AM"; repeat
+  scan answered "Already checked in at 11:51 AM"; bad-token page 404;
+  owner's today list showed the entry with source "qr"; stats moved to
+  6 checked-in / Red List 31. The real `backend/gym.db` was never
+  touched (tests + smoke all ran on temp databases).
+
+## 12. Per-member QR removed from owner UI (2026-10-23)
+
+Owner order: members were confused by two QRs — the product now has exactly
+ONE QR, the big gym entry poster on the Check-In screen (encodes the
+`/checkin/{token}` URL). The per-member QR feature is removed from
+`frontend/index.html`:
+
+- the small QR icon button (`data-qr`) on each member row of the check-in
+  member list is gone — rows now show the member's PHG code as plain text
+  only (e.g. "PHG-014"), alongside the existing Check In / Mark Present
+  controls;
+- the `[data-qr]` click binding and the whole `openQRModal()` function
+  (per-member QR modal with `#modal-qr`) are deleted; no references remain
+  anywhere in the owner UI (`grep` for `openQRModal|data-qr|modal-qr`
+  returns nothing).
+- Untouched, exactly as built: the gym entry QR (`drawQR` on `#gym-qr`,
+  shared `drawQR` helper + QRCode library), the scan check-in flow, PHG
+  member codes, Google auth, plans and the UPI payment panel.
+- Tests: no test asserted the per-member QR UI (suite is API-level), so no
+  test changes were needed. **Full suite: 67 passed.** Inline JS passes
+  `node --check`.
+
+## 13. Add Member UI + joining flow end-to-end (2026-10-23)
+
+Part 1 of the owner's spec completed on the owner side: when a member
+joins, their PHG number comes from the SYSTEM automatically — and the
+owner now has the screen to do it.
+
+- **What existed:** `POST /api/members` (auto-assigns the next PHG code
+  from the monotonic counter, ignores any client-sent code) — but the
+  owner UI had **no Add Member form at all**; the endpoint was
+  unreachable from the app.
+- **Added — Add Member card** on the Check-In screen (`frontend/index.html`,
+  below "Check in by member code"): a toggle opens a clean form — member
+  name, mobile number (marked optional), plan select (Monthly /
+  Quarterly / Yearly). **There is deliberately no code field** — the
+  owner can never type or see a PHG input. On submit it POSTs to
+  `/api/members`; on success a toast announces "✅ <name> added — their
+  PHG number is PHG-0XX. Tell them this number.", the form clears and
+  closes, any active search is reset, and the member list + "in today"
+  count re-render in place (no reload), so the new member's row with the
+  auto-given PHG number is visible immediately. Validation errors land
+  on the fields via the existing `showFieldErrs("am", …)` pattern.
+- **Backend tweak (one rule):** in `create_member`, the phone is now
+  optional — empty is accepted; a number that IS given must still be a
+  valid 10-digit mobile (the existing "Bad Phone" validation test still
+  passes unchanged).
+- **End-to-end proof** — new test `test_joining_flow_end_to_end`
+  (`tests/test_qr_checkin.py`): creates a member sending **no code and
+  no phone** → asserts the response carries the UI-contract fields with
+  `code == "PHG-049"` (next sequential) → immediately scan-checks the
+  brand-new member via `/api/checkin/scan` with the gym token → asserts
+  the owner's `/api/checkins/today` shows the entry with `source "qr"`
+  and the scan's time, and `/api/stats` shows checked-in-today +1 and
+  total members 48 → 49.
+- **Public page re-verified live:** real uvicorn on a temp DB —
+  `GET /checkin/{token}` with **no login** returned 200 with the gym
+  name and the "Your member code" PHG entry (a plain URL any phone
+  scanner or browser opens); a member created without a phone got
+  PHG-049 and an unauthenticated scan recorded the entry, which the
+  owner's today list showed with source "qr". The served app page
+  contains the Add Member form. Real `backend/gym.db` untouched.
+- **Full suite: 68 passed** (67 previous + the new end-to-end test).
+  Inline JS passes `node --check`. Prices, plans, theme and Google auth
+  unchanged; nothing committed or pushed.
+
+## 14. Pay-first gate + Standard price change (2026-10-23)
+
+Owner order (Part 2): *"what is these pay later — after they pay then
+only the website should open and work."* Plus a same-day price update:
+**Standard ₹1,299 → ₹1,599/mo and ₹12,990 → ₹15,990/yr** (yearly still
+10 × monthly = 2 months free). Premium unchanged (₹1,899/mo ·
+₹18,990/yr). Prices live only in `backend/billing.py`; the payment
+panel amounts and `/api/plans` follow automatically (server-computed),
+verified in tests and live below.
+
+- **Pay Later removed completely.** The "Pay Later" button is gone from
+  the payment panel (only **I Have Paid ✓** and a *‹ Back to plans*
+  button that merely closes the panel — no state is saved), the
+  `POST /api/subscription/pay-later` route is deleted (404 for everyone),
+  the amber *Payment pending* badge UI is removed from Plan & Billing,
+  and `_record_subscription_payment` now writes paid records only. A
+  legacy `payment_pending` state (old rows / flags in an existing DB)
+  is treated as **UNPAID** — gated to the payment step.
+- **Hard server-side gate** (`subscription_gate` middleware in
+  `backend/main.py`, decided by `subscription_info()` — one source of
+  truth also exposed on `GET /api/plan` as `subscription_active`,
+  `subscription_status`, `subscription_expires_on`). An authenticated
+  owner whose subscription is not ACTIVE can reach ONLY: the Details
+  step (`/api/details`), the Plans + payment step (`/api/plans`,
+  `/api/plan`, `/api/plan/switch`,
+  `/api/subscription/confirm-payment`, `/payment-qr.png`), `/api/me`,
+  `/api/auth/config`, login/signup/Google/logout, and static/legal
+  pages. Every other owner API (dashboard stats, members, check-ins,
+  Red List, renewals, add-ons, mode, search, check-in link, reset)
+  answers **402 `{"code": "payment_required", "subscription_status":
+  …}`**. Unauthenticated requests pass through to the usual 401s.
+  Choosing a plan (`/api/plan/switch`) no longer activates anything —
+  it only records the choice; the gate lifts **only** when a payment is
+  recorded. Frontend: `routeAfterAuth` checks `subscription_active`
+  before entering the app, and any mid-session 402 routes the owner to
+  the payment step with a clear note (unpaid / pending / expired copy).
+- **ACTIVE definition / expiry.** The latest subscription payment is
+  "paid" and today is inside its window — monthly = 30 days, yearly =
+  365 days from the payment date (the app's existing period model; no
+  trial, no grace). A lapsed plan re-gates to the same payment step
+  with renewal copy ("Your plan has expired… Renew below"), and paying
+  again re-opens the app at once. Plan & Billing shows an amber
+  *Plan expired* badge with a **Renew Now** button for lapsed plans.
+- **Demo account can never be locked out.** `seed_database()` now
+  writes a real PAID `SubscriptionPayment` for the demo gym (Premium
+  monthly, ₹1,899, `upi_qr`) plus `payment_status = "active"` settings,
+  so the demo login is ACTIVE by the same rule as any payer.
+- **Members are never gated.** `GET /checkin/{token}` and
+  `POST /api/checkin/scan` stay public and work against a gated gym
+  (proven live below while the owner got 402s).
+- **Tests — full suite: 78 passed** (68 before; +10 new in
+  `tests/test_payment_gate.py`, pay-later test replaced). New coverage:
+  unpaid owner refused on every app API (direct calls, reads + writes);
+  only the payment step stays reachable while unpaid; plan-switch alone
+  does not unlock; legacy `payment_pending` = unpaid and paying clears
+  it; paying lifts the gate immediately (Standard monthly recorded at
+  the NEW ₹1,599; Standard yearly at ₹15,990); expired monthly plan
+  re-gates and renewal re-opens; yearly plan still active at day 40;
+  demo account active from its seeded payment; public scan works for a
+  gated gym. Updated: plan-price assertions (₹1,599/₹15,990) and the
+  payment-endpoint login test (pay-later now 404).
+- **Live proof** — real uvicorn on a throwaway DB: demo login → stats
+  200; `/api/plans` serves Standard 1599/15990, Premium 1899/18990;
+  after wiping payments in the DB, the owner's direct `GET /api/stats`
+  and `GET /api/members` return 402 `payment_required` while
+  `/api/plan`, `/payment-qr.png` and `/` stay 200; a member scan
+  (PHG-002) succeeds in that state; *I Have Paid* (Standard monthly)
+  records ₹1,599 and stats immediately return 200; backdating the
+  payment 40 days flips the status to `expired` and stats are 402
+  again. The served app page contains no "Pay Later" anywhere. Real
+  `backend/gym.db` data verified untouched (test/smoke DBs only;
+  nothing committed or pushed).
+
+## 15. QR-only panel, in-person collection + admin activation & Control (2026-10-23)
+
+- **Panel decision (owner's order):** the payment panel shows ONLY his
+  PhonePe QR + plan/amount + status line — no phone number, no extra
+  payment options, NO checkout/pay button (the "Pay ₹X" idea was
+  dropped by the owner). At this stage the only interactive element
+  was Back. (The Pay button that later joined the panel is the
+  face-scan trigger — §20.) Test:
+  `test_served_panel_is_qr_plus_face_pay_button` — served HTML has no
+  "I Have Paid", no "Pay Later", no checkout strings.
+- **Honest limitation, stated plainly:** a static QR photo cannot
+  tell the website a transfer happened. Automatic unlock therefore
+  comes from a server-recorded confirmation — in the launch model,
+  Farhan's own activation after collecting in person.
+- **Collection model = PRIMARY activation:** Farhan visits each gym
+  and collects in person. The owner self-confirm route
+  (`POST /api/subscription/confirm-payment`) was REMOVED (404) — an
+  owner can never self-activate.
+- **Admin activation:** env `ADMIN_SECRET` (unset → admin surface is
+  404). Secret-header API (`X-Admin-Secret`, constant-time compare):
+  `GET /api/admin/gyms`, `POST /api/admin/activate` (records via the
+  standard path, method `collected_in_person`, server-computed
+  amount), `POST /api/admin/switch-off`. End-to-end test: owner gated
+  (402) → admin activates → owner's `/api/plan` active → APIs 200.
+- **Control page `/control`:** exists only with `ADMIN_SECRET`; login
+  = the secret as password (rate-limited; wrong → 401); signed admin
+  cookie (12h, HTTP-only, path-scoped to /control + /api/admin);
+  form-token CSRF on POSTs; dashboard shows totals (gyms / active /
+  ₹ collected) and one card per gym — owner name, gym, email,
+  **Google ✓ verified vs Email** tag (from `User.auth_provider`),
+  mobile, plan+period, status, expiry, joined date. No link to
+  /control anywhere in the owner UI.
+- **Switch Off:** per-account override (`revoked_user_<id>`) —
+  `subscription_info()` treats the gym as not active at once; NOTHING
+  is deleted. Documented decision: Activate on a switched-off gym
+  clears the override and records a fresh payment ONLY if the plan/
+  period differs from the live one or the window lapsed. Owner sees
+  "Your plan is currently off. Please contact Do Gym to restart."
+  Tests: activate → works → switch off → 402 everywhere + data
+  present → activate → works, data intact.
+- **Razorpay (dormant):** env-gated order endpoint + webhook
+  (HMAC-SHA256 verified, constant-time; idempotent per payment id;
+  order notes carry user_id). Tests fully offline: valid
+  self-computed signature records + lifts the gate; bad signature
+  records nothing; duplicate delivery records once; gateway-disabled
+  order endpoint 404s. Launch steps in README (~2% fee stated).
+
+## 16. Face unlock (2026-10-23)
+
+- face-api.js 0.22.2 + weights (~7.5MB) vendored at
+  `backend/static/face/`, served via a strict filename whitelist —
+  NO runtime CDN. Only numeric templates (128-float descriptors ×
+  poses) are stored (`FaceTemplate`); never photos. Enrollment lives
+  in /control (3 poses: straight / slight left / slight right);
+  re-register replaces.
+- Owner scan: server issues a single-use challenge (120s TTL) with a
+  server-chosen liveness action (blink / turn_left / turn_right);
+  the browser matches locally (threshold 0.5) + checks the liveness;
+  `POST /api/face-unlock/verify` burns the challenge on ANY attempt;
+  success records method `face_unlock` via the standard path.
+  5 failed verifies → 15-minute lockout. Switch Off overrides a
+  face-unlocked gym; already-active accounts return `already_active`
+  without recording.
+- Tests (camera stubbed at the server seam): enrollment storage +
+  replacement, template endpoint login-only, challenge issue/expiry/
+  single-use, activation records + lifts gate, wrong liveness and
+  over-threshold distance record nothing, lockout after 5 fails,
+  switched-off gym refused, no-template → not available.
+- **Honest limitation (owner's informed choice; he declined the
+  phone-passkey route):** browser-side match + liveness is
+  convenience-grade — photo spoofing is reduced, not eliminated; not
+  bank-grade.
+
+## 17. OTP + canonical signup flow + animated unlock (2026-10-23)
+
+- Canonical order enforced server-side: **(1) Google/email account →
+  (2) OTP → (3) Gym & Owner Details → (4) payment screen → (5)
+  animated unlock → (6) app.** New accounts (incl. Google-created)
+  start `otp_pending`; returning verified Google users skip OTP.
+- OTP: 6 digits, stored as sha256(user:email:code), 10-minute TTL,
+  max 5 attempts (then locked until resend), 60s resend cooldown.
+  While pending, everything except the OTP endpoints + me/logout/
+  config answers 403 `otp_required` (checked BEFORE the payment
+  gate). Delivery: SMTP env-gated; `DEV_OTP_ECHO=1` (dev/tests only,
+  default OFF) echoes the code in responses + stores a dev copy. The
+  OTP code is logged ONLY under DEV_OTP_ECHO.
+- Animated unlock: green card beat → full-screen overlay (SVG ring +
+  check stroke-draw with glow, gym name) → wipe into the dashboard
+  (~1.5s, tap skips). Used by the face-unlock path.
+- Tests (24 in the face+OTP modules at the time): order enforced,
+  wrong×5 locks, expired refused, resend cooldown, Google-new lands
+  in otp_pending, full flow to active.
+
+## 18. Add-Ons removed (2026-10-23)
+
+- Owner's order. Backend endpoints deleted → 404; `member_dict` and
+  stats no longer carry add-on data; frontend screen, nav tab (owner
+  nav: Home · No-Show · Check-In · Renewal · Plan), home shortcut,
+  member chips and all render code removed — zero "addon" references
+  remain in the frontend or main.py. DB tables left in place
+  harmlessly (no destructive migration). Test:
+  `test_addons_section_is_gone`.
+
+## 19. Security hardening pass (2026-10-23)
+
+Plain-language summary: `SECURITY.md`. Attack tests:
+`tests/test_security.py` (17 tests). Highlights:
+
+- **BIG FINDING, FIXED — cross-account paywall bypass:** subscription
+  state had an install-wide fallback, so a never-paid second account
+  rode on another account's payment. State is now strictly
+  per-account; /api/plan's recent payments are filtered to the
+  account's own rows. Documented model: one install = one gym;
+  accounts are that gym's team and share the member register, but
+  payments/OTP/face/details/admin are strictly per-account and
+  IDOR-tested (account B sees none of A's payments, cannot spend A's
+  face challenge, cannot pass OTP with A's code).
+- **Sessions:** tokens were deterministic (same-second logins could
+  mint identical tokens) → random `jti` added. Logout now invalidates
+  ALL of the account's tokens (`users.session_epoch` bump).
+- **CSRF:** origin-check middleware on state-changing /api/* (403 on
+  foreign Origin; webhooks + admin API exempt); Control forms keep
+  their token CSRF (forged-token test proves nothing changes).
+- **Headers:** full set on all responses incl. Permissions-Policy
+  (camera=(self) only) and HSTS only under HTTPS. bcrypt cost 12
+  verified. Logs mask emails/phones; generic 500 handler (no stack
+  traces to clients); /health minimal; DB/backup/log/.env paths 404
+  over HTTP; no string-built SQL anywhere.
+- Env scaffolding: `.env.example` + `render.yaml` gained the SMTP
+  block (DEV_OTP_ECHO deliberately NOT in render.yaml).
+
+## 20. Face-gated unlock everywhere + plan limit (2026-10-23)
+
+- **Owner correction (supersedes poll-only unlock):** the payment
+  panel must NOT unlock by itself. The served owner UI contains NO
+  polling machinery at all (`startPaymentWatch` / `checkPaymentDone`
+  / `PAY_POLL` deleted — asserted by test). The ONE owner-screen
+  unlock path: the panel's **Pay** button → face-scan session →
+  verified → activation recorded → green "Payment Done" → animated
+  unlock. Without a successful face verification the gym stays
+  locked — no timers, no passive completion.
+- **Same rule in Control:** the Activate button (page form AND the
+  cookie-authenticated admin API) must carry a passed face
+  verification (admin challenge: single-use, 120s, server-chosen
+  liveness, distance ≤ 0.5) or NOTHING is recorded — tested: a plain
+  form post leaves the DB byte-identical and the gym locked. The
+  **secret-header API is the documented break-glass exception**
+  (works with no face enrolled; no UI links to it; README +
+  SECURITY.md say so plainly).
+- **Not enrolled yet:** the Pay button explains "Face unlock is not
+  set up yet — ask Do Gym to complete setup."; Control's challenge
+  endpoint refuses with "Enroll your face first…".
+- **Standard plan member limit 150 → 69** (`backend/billing.py`,
+  single source — plans API + Plan & Billing usage follow
+  automatically; assertions updated). Premium unchanged (unlimited).
+
+## 21. Full end-to-end pass over the whole workflow (2026-10-23)
+
+- Live uvicorn on a throwaway DB, scripted curl journey, **37/37
+  checks passed**: signup → otp_pending → details 403 before OTP →
+  wrong OTP refused, right OTP opens → details → plan → stats 402 →
+  /control wrong password 401 → gym listed "Not Paid" → **page
+  Activate without face proof stays locked** → with face proof
+  activates (method `collected_in_person`, ₹1,599 from billing.py) →
+  stats 200 → wall-QR scan (PHG-001, Rohit A.) → red list −1 → face
+  enroll + a fresh gym unlocks by face (`face_unlock`) → backdated
+  40 days → expired → reactivate → Switch Off → locked → restore →
+  48 members + check-ins intact → self-confirm 404 → add-ons 404 →
+  face assets 200 → Permissions-Policy present → second boot WITHOUT
+  ADMIN_SECRET: /control + admin API 404.
+- Full pytest suite after ALL changes above (incl. §§20–22):
+  **145 passed, 0 failed**. Real `backend/gym.db` sha256 re-verified
+  identical to the 2026-10-23 baseline
+  (85c9fa42…b6824a5) — untouched. Nothing committed or pushed.
+
+## 22. Dedicated face-scan page (2026-10-23)
+
+- **Owner flow order (Farhan's refinement):** QR payment page (with
+  the Pay button) → **Pay** → the dedicated full-screen **"Scan
+  Farhan's Face"** page (its own SPA view: camera, status, liveness
+  instructions, Cancel) → verified → the page turns green
+  ("Payment Done ✓") → unlock animation → dashboard. Cancel or
+  failure returns to the QR page, still locked. The scan is no
+  longer a section inside the panel — the panel carries no video
+  element at all (asserted: `pay-scan-area` absent, `facescan-view`
+  + `scan-face-video` present in the served page).
+- **Control:** Activate opens the same kind of dedicated page
+  ("Scan Your Face", naming the gym) in place of the dashboard;
+  a passed scan submits the activation; Cancel returns to the
+  dashboard with nothing recorded. The in-card scan box is gone
+  (asserted in tests).
+- Backend challenge/verify endpoints unchanged.

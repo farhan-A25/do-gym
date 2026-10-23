@@ -13,12 +13,12 @@ SUBSCRIPTION_PLANS = [
     {
         "id": "starter",
         "name": "Standard",
-        "monthly": 1299,
-        "yearly": 12990,
-        "member_limit": 150,
+        "monthly": 1599,
+        "yearly": 15990,
+        "member_limit": 69,
         "badge": None,
         "features": [
-            "Up to 150 members",
+            "Up to 69 members",
             "No-Show Red List",
             "QR Check-In",
             "Renewals",
@@ -37,7 +37,6 @@ SUBSCRIPTION_PLANS = [
         "features": [
             "Unlimited members",
             "Everything in Standard",
-            "Add-Ons & revenue tracking",
             "AUTO + MANUAL modes",
             "Renewal history & reports",
             "Priority support",

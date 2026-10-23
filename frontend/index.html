@@ -62,6 +62,12 @@ h2{font-size:20px;font-weight:800;letter-spacing:-.01em}
 .btn-deep{background:var(--grad-deep);color:#fff;box-shadow:var(--glow-deep)}
 .btn-ghost{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text)}
 .btn-sm{padding:9px 14px;font-size:13.5px;min-height:42px;border-radius:10px}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:#fff;color:#1f1f1f;border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:13px 18px;font-size:15px;font-weight:600;min-height:48px;text-decoration:none;transition:transform .15s, box-shadow .2s}
+.btn-google:hover{box-shadow:0 6px 18px rgba(255,255,255,.14)}
+.btn-google:active{transform:scale(.98)}
+.btn-google svg{flex:none}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:14px 0 16px;color:var(--muted2);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.auth-divider::before,.auth-divider::after{content:"";flex:1;height:1px;background:var(--border)}
 .error-box{background:var(--red-soft);border:1px solid rgba(255,59,59,.4);color:#ffb4b4;border-radius:12px;padding:11px 13px;font-size:13.5px;margin-bottom:14px;line-height:1.45}
 .hint-box{background:rgba(10,132,255,.10);border:1px solid rgba(10,132,255,.35);border-radius:12px;padding:11px 13px;font-size:13px;color:#cfe8ff;margin-top:14px;line-height:1.55}
 .cookie-note{font-size:12px;color:var(--muted2);text-align:center;margin-top:16px;line-height:1.5}
@@ -127,7 +133,6 @@ header.app-header{position:sticky;top:0;z-index:40;background:rgba(10,10,11,.88)
 .x-btn:hover{color:#fff}
 .tag{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.08em;padding:3px 7px;border-radius:999px;vertical-align:2px;margin-left:7px}
 .tag-manual{background:#0e1a29;color:#7cc7ff;border:1px solid rgba(10,132,255,.55)}
-.tag-addon{background:rgba(10,132,255,.14);color:#9fd8ff;border:1px solid rgba(10,132,255,.35);margin:3px 4px 0 0}
 .chip-present{background:var(--grad);color:#fff;font-size:12.5px;font-weight:800;padding:9px 13px;border-radius:10px;min-height:42px}
 .chip-mark{background:rgba(255,255,255,.06);border:1px solid var(--border);color:#fff;font-size:12.5px;font-weight:700;padding:9px 13px;border-radius:10px;min-height:42px}
 .empty{background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.14);border-radius:var(--radius);padding:26px 18px;text-align:center;color:var(--muted);font-size:14px;line-height:1.55}
@@ -186,7 +191,28 @@ nav.bottom button.on .dot{opacity:1}
 .pay-qr-card{background:#fff;border-radius:18px;padding:16px;width:min(284px,100%);margin:14px auto 4px;box-shadow:0 14px 34px rgba(0,0,0,.45)}
 .pay-qr-card img{width:100%;height:auto;display:block;border-radius:8px}
 .pay-qr-fallback{display:none;text-align:center;color:#101012;font-weight:800;font-size:15px;padding:38px 12px;line-height:1.55}
-.badge-pending{display:inline-block;background:rgba(245,158,11,.16);color:#fbbf24;border:1px solid rgba(245,158,11,.55);font-size:11px;font-weight:800;letter-spacing:.05em;padding:4px 10px;border-radius:99px;text-transform:uppercase}
+/* ---------- payment panel: waiting → green "Payment Done ✓" ---------- */
+.pay-visual{position:relative;width:min(284px,100%);margin:14px auto 4px}
+.pay-visual .pay-qr-card{width:100%;margin:0 auto}
+.pay-done-badge{display:none;position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:#22c55e;color:#04150a;font-weight:900;font-size:13.5px;letter-spacing:.02em;padding:6px 16px;border-radius:99px;box-shadow:0 8px 22px rgba(34,197,94,.45);white-space:nowrap;z-index:2}
+.pay-visual.paid .pay-done-badge{display:block}
+.pay-visual.paid .pay-qr-card{outline:3px solid #22c55e;box-shadow:0 0 0 6px rgba(34,197,94,.22),0 14px 34px rgba(0,0,0,.45)}
+/* Animated unlock (canonical flow step 5): the green Payment Done card
+   hands over to this full-screen moment — ring + check draw in, the
+   screen then wipes up into the dashboard. Tapping skips ahead. */
+.unlock-overlay{position:fixed;inset:0;z-index:300;background:radial-gradient(120% 120% at 50% 0%,#0d2818 0%,#050807 62%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:transform .5s cubic-bezier(.7,0,.3,1),opacity .5s}
+.unlock-overlay.wipe{transform:translateY(-102%);opacity:.35}
+.unlock-badge{width:124px;height:124px;animation:unlockPop .6s cubic-bezier(.2,1.6,.4,1) both}
+.unlock-badge svg{width:100%;height:100%}
+.unlock-badge circle{fill:none;stroke:#2ecc71;stroke-width:3;stroke-dasharray:160;stroke-dashoffset:160;animation:drawRing .7s .1s ease forwards;filter:drop-shadow(0 0 14px rgba(46,204,113,.85))}
+.unlock-badge path{fill:none;stroke:#2ecc71;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60;animation:drawRing .45s .6s ease forwards}
+@keyframes drawRing{to{stroke-dashoffset:0}}
+@keyframes unlockPop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+.unlock-title{font-size:25px;font-weight:900;color:#eafff3;animation:unlockPop .6s .15s cubic-bezier(.2,1.6,.4,1) both}
+.unlock-sub{color:#9fd8b4;font-size:14px;animation:unlockPop .6s .25s cubic-bezier(.2,1.6,.4,1) both}
+.pay-status{display:flex;align-items:center;justify-content:center;gap:9px;text-align:center;font-size:14.5px;font-weight:700;margin-top:14px;color:var(--muted)}
+.pay-status.done{color:#4ade80}
+.badge-due{display:inline-block;background:rgba(245,158,11,.16);color:#fbbf24;border:1px solid rgba(245,158,11,.55);font-size:11px;font-weight:800;letter-spacing:.05em;padding:4px 10px;border-radius:99px;text-transform:uppercase}
 .badge-active{display:inline-block;background:rgba(52,211,153,.14);color:#6ee7b7;border:1px solid rgba(52,211,153,.45);font-size:11px;font-weight:800;letter-spacing:.05em;padding:4px 10px;border-radius:99px;text-transform:uppercase}
 </style>
 </head>
@@ -208,6 +234,10 @@ nav.bottom button.on .dot{opacity:1}
       <h2 style="margin-bottom:16px">Owner Login</h2>
       <div id="login-error" class="error-box hidden"></div>
       <div id="login-note" class="hint-box hidden" style="margin:0 0 14px"></div>
+      <div class="google-auth hidden">
+        <a class="btn-google" href="/auth/google"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571.001-.001.002-.001.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>Continue with Google</a>
+        <div class="auth-divider"><span>or</span></div>
+      </div>
       <div class="field">
         <label for="login-email">Email</label>
         <input id="login-email" type="email" name="email" placeholder="you@yourgym.in" autocomplete="username" maxlength="120" required>
@@ -236,6 +266,10 @@ nav.bottom button.on .dot{opacity:1}
     <form class="login-card" id="signup-form" novalidate>
       <h2 style="margin-bottom:16px">Sign Up</h2>
       <div id="signup-error" class="error-box hidden"></div>
+      <div class="google-auth hidden">
+        <a class="btn-google" href="/auth/google"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571.001-.001.002-.001.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>Continue with Google</a>
+        <div class="auth-divider"><span>or sign up with email</span></div>
+      </div>
       <div class="field"><label for="s-owner">Your Full Name</label>
         <input id="s-owner" type="text" placeholder="e.g. Rahul Sharma" autocomplete="name" maxlength="120">
         <p class="field-err" id="err-s-owner_name"></p></div>
@@ -302,17 +336,50 @@ nav.bottom button.on .dot{opacity:1}
     </form>
   </div>
 
+  <!-- ================= OTP (canonical flow step 2) ================= -->
+  <div id="otp-view" class="hidden">
+    <div class="logo-mark">📩</div>
+    <h1>Enter your <span class="grad-text">OTP</span></h1>
+    <p class="sub" style="margin-top:7px">We sent a 6-digit code to <strong id="otp-email"></strong>. Enter it to continue — next come your gym details, then payment. The code works for 10 minutes.</p>
+    <div id="otp-dev-note" class="hint-box hidden" style="margin-top:14px"></div>
+    <form id="otp-form" style="margin-top:18px">
+      <div class="field"><label for="otp-code">6-digit OTP</label>
+        <input id="otp-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" style="letter-spacing:.45em;text-align:center;font-size:22px;font-weight:800">
+      </div>
+      <div id="otp-error" class="error-box hidden"></div>
+      <button class="btn btn-grad" type="submit" id="otp-btn">Verify OTP →</button>
+    </form>
+    <p class="small" style="text-align:center;margin-top:16px">Didn't get the email? <button type="button" class="link-btn" id="otp-resend">Resend OTP</button> <span id="otp-resend-note"></span></p>
+    <button class="link-btn" id="otp-logout" type="button" style="margin-top:10px">Log out</button>
+  </div>
+
   <!-- ================= UPGRADE / CHOOSE PLAN ================= -->
   <div id="upgrade-view" class="hidden">
     <div class="logo-mark">💎</div>
     <h1>Choose your <span class="grad-text">plan</span></h1>
-    <p class="sub" style="margin-top:7px">One last step — pick the plan that fits your gym. You can change it anytime from Plan &amp; Billing.</p>
+    <p class="sub" style="margin-top:7px" id="up-sub">One last step — pick the plan that fits your gym. You can change it anytime from Plan &amp; Billing.</p>
+    <div id="up-note" class="hint-box hidden" style="margin-top:14px"></div>
     <div class="seg" style="margin:16px 0">
       <button type="button" id="up-monthly" class="on">Monthly</button>
       <button type="button" id="up-yearly">Yearly · 2 months free 🎉</button>
     </div>
     <div id="upgrade-cards"></div>
     <p class="cookie-note">Pay securely by scanning the UPI QR on the next step — GPay, PhonePe, Paytm and every UPI app work.<br>Prices in INR. GST extra as applicable. Cancel anytime.</p>
+    <button class="link-btn" id="up-logout" type="button" style="margin-top:12px">Log out</button>
+  </div>
+
+  <!-- ============ FACE SCAN — dedicated page (QR page -> Pay -> HERE -> unlock) ============ -->
+  <div id="facescan-view" class="hidden">
+    <div class="logo-mark">🔓</div>
+    <h1>Scan <span class="grad-text">Farhan's Face</span></h1>
+    <p class="sub" style="margin-top:7px">Farhan is here in person, on this device. He looks at the camera and does the small movement asked — the scan checks it's really him, then your gym unlocks. No scan, no unlock.</p>
+    <video id="scan-face-video" autoplay playsinline muted style="width:100%;border-radius:16px;background:#000;margin-top:16px"></video>
+    <div class="pay-status" id="scan-face-status" style="margin-top:12px"><span class="spin"></span><span>Starting the camera…</span></div>
+    <div id="facescan-done" class="hidden" style="margin-top:14px;text-align:center">
+      <div style="width:76px;height:76px;border-radius:50%;background:#16a34a;color:#fff;font-size:40px;line-height:76px;margin:0 auto">✓</div>
+      <div style="font-weight:900;font-size:19px;margin-top:8px">Payment Done ✓</div>
+    </div>
+    <button type="button" class="btn btn-ghost" id="scan-face-cancel" style="width:100%;margin-top:14px">Cancel — back to payment</button>
   </div>
 
   <!-- ================= APP ================= -->
@@ -336,8 +403,6 @@ nav.bottom button.on .dot{opacity:1}
       <section class="screen" id="screen-checkin"></section>
       <!-- RENEWAL -->
       <section class="screen" id="screen-renewal"></section>
-      <!-- ADD-ONS -->
-      <section class="screen" id="screen-addons"></section>
       <!-- PLAN & BILLING -->
       <section class="screen" id="screen-plan"></section>
     </main>
@@ -347,7 +412,6 @@ nav.bottom button.on .dot{opacity:1}
       <button data-tab="red" type="button"><svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-7h-2v5h2V9z"/></svg>No-Show<span class="dot"></span></button>
       <button data-tab="checkin" type="button"><svg viewBox="0 0 24 24"><path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v3h-3v-3zm-5 5h3v3h-3v-3zm5 0h3v3h-3v-3z"/></svg>Check-In<span class="dot"></span></button>
       <button data-tab="renewal" type="button"><svg viewBox="0 0 24 24"><path d="M12 5V1.8L5.8 8 12 14.2V11a6 6 0 1 1-6 6H3.5A8.5 8.5 0 1 0 12 5z"/></svg>Renewal<span class="dot"></span></button>
-      <button data-tab="addons" type="button"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>Add-Ons<span class="dot"></span></button>
       <button data-tab="plan" type="button"><svg viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 14H4v-6h16v6zM4 8h16v2H4z"/></svg>Plan<span class="dot"></span></button>
     </nav>
   </div>
@@ -370,18 +434,14 @@ function daysAgoText(m){
   if (m.days_absent === 1) return "Last visit: " + fmtDate(m.last_visit) + " (yesterday)";
   return "Last visit: " + fmtDate(m.last_visit) + " (" + m.days_absent + " days ago)";
 }
-function addonTags(m){
-  if (!m.addons || !m.addons.length) return "";
-  return '<div>' + m.addons.map(a => '<span class="tag tag-addon">' + esc(a.addon_name) + "</span>").join("") + "</div>";
-}
 function phoneHref(p){ return "tel:+91" + String(p).replace(/\D/g, ""); }
 function phoneText(p){ const d = String(p).replace(/\D/g, ""); return "+91 " + d.slice(0,5) + " " + d.slice(5); }
 
 let MODE = "auto";
 let TAB = "home";
-const SEARCH = { home:"", red:"", checkin:"", renewal:"", addons:"", plan:"" };
+const SEARCH = { home:"", red:"", checkin:"", renewal:"", plan:"" };
 let RED_FILTER = 10;
-const DATA = { members: [], stats: null, red: [], renewals: null, addons: null, today: [] };
+const DATA = { members: [], stats: null, red: [], renewals: null, today: [] };
 
 /* ---------------- API layer ---------------- */
 async function api(path, opts = {}){
@@ -398,6 +458,14 @@ async function api(path, opts = {}){
     showLogin("Your session has ended. Please log in again to continue.");
     throw new Error("unauthenticated");
   }
+  if (res.status === 402 && data.code === "payment_required") {
+    onPaymentRequired(data);
+    throw new Error("payment_required");
+  }
+  if (res.status === 403 && data.code === "otp_required") {
+    if (ME) { ME.otp_pending = true; openOtp(); }
+    throw new Error("otp_required");
+  }
   return { status: res.status, ok: res.ok, data };
 }
 function toast(msg){
@@ -411,7 +479,7 @@ function toast(msg){
 /* ---------------- Views & entry flow routing ---------------- */
 let ME = null;
 let APP_INITED = false;
-const FLOW_VIEWS = ["login", "signup", "details", "upgrade", "app"];
+const FLOW_VIEWS = ["login", "signup", "otp", "details", "upgrade", "facescan", "app"];
 function showView(name){
   FLOW_VIEWS.forEach(v => { const el = document.getElementById(v + "-view"); if (el) el.classList.toggle("hidden", v !== name); });
   window.scrollTo({ top: 0 });
@@ -425,16 +493,138 @@ function showLogin(note){
 }
 function showApp(){ showView("app"); }
 function setGymName(){ if (ME && ME.gym_name) $("#hdr-gym").textContent = ME.gym_name; }
-/* The route guard: no login → Login; no details → Details; no plan → Upgrade; else the app. */
+/* Pay-first gate (server-enforced): subscription not active -> payment step.
+   The server answers gated API calls with 402 + code "payment_required";
+   routeAfterAuth also checks /api/plan up front so a gated owner never
+   enters the app in the first place. */
+let GATE_STATUS = null; // payment_pending | expired | unpaid
+const GATE_MSGS = {
+  expired: "⏰ Your plan has expired. Renew below to keep using Do Gym — your members and data are safe and waiting.",
+  payment_pending: "🕒 Your plan was saved earlier with payment pending. Complete the payment below to unlock your gym.",
+  unpaid: "🔒 One last step — complete your payment below to unlock your gym.",
+  switched_off: "⏸️ Your plan is currently off. Please contact Do Gym to restart.",
+};
+function onPaymentRequired(data){
+  GATE_STATUS = (data && data.subscription_status) || "unpaid";
+  if (!ME) { showLogin(); return; }
+  openUpgrade();
+}
+/* The route guard: no login → Login; no details → Details; subscription
+   not active → Upgrade/payment; no plan → Upgrade; else the app. */
 async function routeAfterAuth(){
   const r = await api("/api/me").catch(() => null);
   if (!r || !r.ok) { showLogin(); return; }
   ME = r.data;
   setGymName();
+  if (ME.otp_pending) { openOtp(); return; }
   if (!ME.details_completed) { await openDetails(false); return; }
+  const plan = await api("/api/plan").catch(() => null);
+  if (plan && plan.ok && plan.data.subscription_active === false) {
+    GATE_STATUS = plan.data.subscription_status || "unpaid";
+    await openUpgrade();
+    return;
+  }
   if (!ME.plan_chosen) { await openUpgrade(); return; }
   await enterApp();
 }
+/* ---------------- OTP screen (canonical flow step 2) ---------------- */
+let OTP_RESEND_TIMER = null;
+function otpResendCountdown(seconds){
+  const btn = $("#otp-resend"), note = $("#otp-resend-note");
+  if (!btn) return;
+  clearInterval(OTP_RESEND_TIMER);
+  let left = Math.max(0, Math.floor(seconds || 0));
+  const paint = () => {
+    if (left > 0) { btn.disabled = true; note.textContent = "— new code in " + left + "s"; }
+    else { btn.disabled = false; note.textContent = ""; clearInterval(OTP_RESEND_TIMER); }
+  };
+  paint();
+  if (left > 0) OTP_RESEND_TIMER = setInterval(() => { left -= 1; paint(); }, 1000);
+}
+function openOtp(){
+  showView("otp");
+  if (ME && ME.email) $("#otp-email").textContent = ME.email;
+  $("#otp-error").classList.add("hidden");
+  $("#otp-code").value = "";
+  otpResendCountdown(ME && ME.otp_resend_in ? ME.otp_resend_in : 60);
+  setTimeout(() => { const i = $("#otp-code"); if (i) i.focus(); }, 60);
+}
+$("#otp-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const code = $("#otp-code").value.trim();
+  const errBox = $("#otp-error");
+  errBox.classList.add("hidden");
+  if (!/^\d{6}$/.test(code)) {
+    errBox.textContent = "Please enter the 6-digit code from your email.";
+    errBox.classList.remove("hidden");
+    return;
+  }
+  const btn = $("#otp-btn");
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Checking…';
+  try {
+    const r = await api("/api/auth/otp/verify", { method: "POST", body: JSON.stringify({ code }) });
+    if (r.ok) {
+      if (ME) ME.otp_pending = false;
+      toast("Email verified ✓ — almost there!");
+      await routeAfterAuth();
+    } else {
+      errBox.textContent = r.data.detail || "That code did not work. Please try again.";
+      errBox.classList.remove("hidden");
+    }
+  } finally { btn.disabled = false; btn.textContent = "Verify OTP →"; }
+});
+$("#otp-resend").addEventListener("click", async () => {
+  const btn = $("#otp-resend");
+  btn.disabled = true;
+  const r = await api("/api/auth/otp/send", { method: "POST" }).catch(() => null);
+  if (r && r.ok) {
+    toast("A fresh OTP is on its way to your email.");
+    if (r.data.dev_otp) {
+      const dn = $("#otp-dev-note");
+      dn.textContent = "Dev mode (DEV_OTP_ECHO): your OTP is " + r.data.dev_otp;
+      dn.classList.remove("hidden");
+    }
+    otpResendCountdown(60);
+  } else {
+    toast((r && r.data && r.data.detail) || "Please wait a moment before resending.");
+    otpResendCountdown(30);
+  }
+});
+$("#otp-logout").addEventListener("click", async () => {
+  await api("/api/logout", { method: "POST" }).catch(() => {});
+  ME = null;
+  showLogin();
+  toast("You have been logged out safely.");
+});
+
+/* ---------------- Animated unlock (canonical flow step 5) ----------------
+   Shown the moment the payment watch (or a face scan) confirms the
+   subscription: an animated ring + check draws in with a glow, the
+   gym name appears, then the whole screen wipes up into the
+   dashboard. Tapping anywhere skips straight to the end. */
+function playUnlockAnimation(proceed){
+  const old = document.querySelector(".unlock-overlay");
+  if (old) old.remove();
+  const ov = document.createElement("div");
+  ov.className = "unlock-overlay";
+  ov.innerHTML =
+    '<div class="unlock-badge"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M14 27l8 8 16-16"/></svg></div>' +
+    '<div class="unlock-title">Payment Done ✓</div>' +
+    '<div class="unlock-sub">' + esc(ME && ME.gym_name ? ME.gym_name : "Your gym") + " is now open 🎉</div>";
+  document.body.appendChild(ov);
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timer);
+    if (proceed) proceed();
+    ov.classList.add("wipe");
+    setTimeout(() => ov.remove(), 560);
+  };
+  const timer = setTimeout(finish, 1500);
+  ov.addEventListener("click", finish);
+}
+
 async function enterApp(){
   showView("app");
   if (!APP_INITED) { APP_INITED = true; await initApp(); }
@@ -475,6 +665,13 @@ $("#logout-btn").addEventListener("click", async () => {
   showLogin();
   toast("You have been logged out safely.");
 });
+$("#up-logout").addEventListener("click", async () => {
+  await api("/api/logout", { method: "POST" }).catch(() => {});
+  ME = null;
+  GATE_STATUS = null;
+  showLogin();
+  toast("You have been logged out safely.");
+});
 
 /* ---------------- Navigation ---------------- */
 $$("#bottom-nav button").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
@@ -489,7 +686,6 @@ async function switchTab(name){
   else if (name === "red") await renderRed();
   else if (name === "checkin") await renderCheckin();
   else if (name === "renewal") await renderRenewal();
-  else if (name === "addons") await renderAddons();
   else if (name === "plan") await renderPlan();
 }
 
@@ -578,7 +774,6 @@ async function renderHome(){
       '<button class="shortcut sc-blue" data-go="red"><span class="sc-k">SCREEN 1</span><span class="sc-t">NO-SHOW</span></button>' +
       '<button class="shortcut sc-deep" data-go="checkin"><span class="sc-k">SCREEN 2</span><span class="sc-t">QR CHECK-IN</span></button>' +
       '<button class="shortcut sc-blue" data-go="renewal"><span class="sc-k">SCREEN 3</span><span class="sc-t">RENEWAL</span></button>' +
-      '<button class="shortcut sc-deep" data-go="addons"><span class="sc-k">SCREEN 4</span><span class="sc-t">ADD-ONS</span></button>' +
     "</div>" +
     '<div class="section-head"><h2>Today\'s Check-Ins</h2><span class="small">' + DATA.today.length + " member" + (DATA.today.length === 1 ? "" : "s") + "</span></div>" +
     '<div id="home-today">' + todayListHTML() + "</div>" +
@@ -600,7 +795,7 @@ async function renderHome(){
   }).catch(() => {});
   el.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.go)));
   $("#reset-btn").addEventListener("click", async () => {
-    if (!confirm("Reset all demo data back to the start? This will undo check-ins, renewals and add-ons you added.")) return;
+    if (!confirm("Reset all demo data back to the start? This will undo check-ins and renewals you made.")) return;
     const r = await api("/api/reset", { method: "POST" });
     if (r.ok) { toast("Demo data has been reset."); await renderHome(); }
   });
@@ -632,8 +827,7 @@ function paintQuickFind(){
     '<div class="avatar">' + esc(initials(m.name)) + '</div><div class="row-main"><div class="row-name">' + esc(m.name) + '</div><div class="row-sub">' + esc(m.code) + " · " + esc(phoneText(m.phone)) + "</div></div></div>" +
     '<div class="row-sub" style="font-size:13px;line-height:1.65">' +
     "🗓 " + esc(daysAgoText(m)) + "<br>" +
-    "🎟 " + esc(m.plan) + " plan · Expires " + esc(fmtDate(m.expiry_date)) + " (" + (m.days_left < 0 ? Math.abs(m.days_left) + " days ago — expired" : m.days_left === 0 ? "today" : m.days_left + " days left") + ")<br>" +
-    "➕ Add-ons: " + (m.addons.length ? esc(m.addons.map(a => a.addon_name).join(", ")) : "None") + "</div>" +
+    "🎟 " + esc(m.plan) + " plan · Expires " + esc(fmtDate(m.expiry_date)) + " (" + (m.days_left < 0 ? Math.abs(m.days_left) + " days ago — expired" : m.days_left === 0 ? "today" : m.days_left + " days left") + ")</div>" +
     '<div style="display:flex;gap:9px;margin-top:13px">' +
     '<a class="btn btn-ghost btn-sm" style="flex:1;text-decoration:none" href="' + esc(phoneHref(m.phone)) + '">📞 Call</a>' +
     (m.checked_in_today
@@ -720,25 +914,61 @@ function paintRedList(){
 /* ================= QR CHECK-IN ================= */
 async function renderCheckin(){
   const el = $("#screen-checkin");
-  const [members, today] = await Promise.all([api("/api/members"), api("/api/checkins/today")]);
+  const [members, today, link] = await Promise.all([api("/api/members"), api("/api/checkins/today"), api("/api/gym/checkin-link")]);
   if (!members.ok) return;
   DATA.members = members.data.members || []; DATA.today = today.data.checkins || [];
+  const gymName = link.ok ? (link.data.gym_name || "Your Gym") : "Your Gym";
+  const checkinUrl = link.ok ? link.data.url : "";
   el.innerHTML =
     "<h1 style='font-size:24px;margin-bottom:6px'>QR <span class='grad-text'>Check-In</span></h1>" +
-    '<p class="sub" style="margin-bottom:16px">Members scan the gym code at the door — or check them in yourself below. The moment someone checks in, they leave the Red List automatically.</p>' +
+    '<p class="sub" style="margin-bottom:16px">Members scan the poster at the door with their own phone and check in by themselves — the moment someone checks in, they leave the Red List automatically. Or check them in yourself below.</p>' +
     '<div class="card" style="text-align:center;margin-bottom:14px"><div style="font-weight:800;font-size:15px;margin-bottom:4px">Gym Entry Code</div>' +
     '<p class="small" style="margin-bottom:13px">Print this and stick it at the front desk.</p><div class="qr-box" id="gym-qr"></div>' +
-    '<div style="font-weight:800;letter-spacing:.14em;margin-top:12px">POWERHOUSE-GYM</div></div>' +
+    '<div style="font-weight:800;letter-spacing:.14em;margin-top:12px">' + esc(gymName.toUpperCase()) + '</div>' +
+    '<p class="small" style="margin-top:8px">Members: scan with your phone camera to check in</p>' +
+    (checkinUrl
+      ? '<div style="margin-top:13px;border-top:1px solid var(--border);padding-top:12px"><div class="small" style="word-break:break-all" id="ci-link-text">' + esc(checkinUrl) + '</div>' +
+        '<div style="display:flex;gap:9px;margin-top:10px"><button class="btn btn-ghost btn-sm" id="ci-copy" type="button" style="flex:1">Copy Link</button>' +
+        '<button class="btn btn-ghost btn-sm" id="ci-reset-link" type="button" style="flex:1">New Link</button></div>' +
+        '<p class="small" style="margin-top:9px">"New Link" makes a fresh poster link — posters printed with the old link stop working.</p></div>'
+      : '<p class="small" style="margin-top:10px">Could not load the check-in link just now — reopen this screen to try again.</p>') +
+    '</div>' +
     '<div id="ci-msg"></div>' +
     '<div class="card" style="margin-bottom:16px"><strong style="font-size:15px">Check in by member code</strong>' +
     '<div style="display:flex;gap:9px;margin-top:12px"><input class="inp" id="ci-code" placeholder="e.g. PHG-001" maxlength="20" style="flex:1;text-transform:uppercase">' +
     '<button class="btn btn-grad btn-sm" id="ci-go" type="button" style="width:auto">Check In</button></div>' +
     '<button class="btn btn-deep" id="ci-sim" type="button" style="width:100%;margin-top:11px">📷 Simulate a Scan</button>' +
     '<p class="small" style="margin-top:10px">Simulate Scan picks a member who has not come today — just like a real scan at the door.</p></div>' +
-    '<div class="section-head"><h2>' + (MODE === "manual" ? "Mark Attendance (Manual)" : "All Members") + '</h2><span class="small">' + DATA.today.length + " in today</span></div>" +
+    '<div class="card" style="margin-bottom:16px"><strong style="font-size:15px">Add a Member</strong>' +
+    '<p class="small" style="margin-top:6px">Someone new joining? Add them here — the app gives them their own PHG number by itself. That number is theirs for every visit: they type it once when they scan the entry QR, and their phone remembers it after that.</p>' +
+    '<button class="btn btn-grad" id="ci-add-toggle" type="button" style="width:100%;margin-top:12px">＋ Add Member</button>' +
+    '<form id="am-form" class="hidden" style="margin-top:14px" novalidate>' +
+    '<div class="field"><label for="am-name">Member name</label><input id="am-name" type="text" placeholder="e.g. Rahul Verma" maxlength="120" autocomplete="off"><p class="field-err" id="err-am-name"></p></div>' +
+    '<div class="field"><label for="am-phone">Mobile number <span style="color:var(--muted2)">(optional)</span></label><input id="am-phone" type="tel" placeholder="10-digit mobile number" maxlength="15" autocomplete="off"><p class="field-err" id="err-am-phone"></p></div>' +
+    '<div class="field"><label for="am-plan">Plan</label><select class="sel" id="am-plan"><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option></select><p class="field-err" id="err-am-plan"></p></div>' +
+    '<button class="btn btn-grad" id="am-submit" type="submit" style="width:100%">Add Member</button></form></div>' +
+    '<div class="section-head"><h2>' + (MODE === "manual" ? "Mark Attendance (Manual)" : "All Members") + '</h2><span class="small" id="ci-in-today">' + DATA.today.length + " in today</span></div>" +
     searchHTML("checkin", "Search members… (name or code)") +
     '<p class="showing" id="ci-showing"></p><div id="ci-list"></div>';
-  drawQR($("#gym-qr"), "POWERHOUSE-GYM-CHECKIN");
+  drawQR($("#gym-qr"), checkinUrl || "POWERHOUSE-GYM-CHECKIN");
+  const copyBtn = $("#ci-copy");
+  if (copyBtn) copyBtn.addEventListener("click", async () => {
+    const done = () => toast("Check-in link copied.");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try { await navigator.clipboard.writeText(checkinUrl); done(); return; } catch (e) { /* fall through */ }
+    }
+    const ta = document.createElement("textarea");
+    ta.value = checkinUrl; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { toast("Copy failed — long-press the link to copy it."); }
+    ta.remove();
+  });
+  const resetBtn = $("#ci-reset-link");
+  if (resetBtn) resetBtn.addEventListener("click", async () => {
+    if (!window.confirm("Make a NEW check-in link? Posters printed with the old link will stop working.")) return;
+    const r = await api("/api/gym/checkin-link/reset", { method: "POST" });
+    if (r.ok) { toast("New check-in link ready — reprint your poster."); await renderCheckin(); }
+    else toast(r.data.detail || "Could not make a new link. Please try again.");
+  });
   const showCiMsg = (html, ok) => { $("#ci-msg").innerHTML = '<div class="msg ' + (ok ? "msg-ok" : "msg-err") + '">' + html + "</div>"; };
   $("#ci-go").addEventListener("click", async () => {
     const code = $("#ci-code").value.trim();
@@ -765,12 +995,47 @@ async function renderCheckin(){
   inp.addEventListener("input", () => { SEARCH.checkin = inp.value; paintCiList(); });
   const clr = $("#clear-checkin");
   if (clr) clr.addEventListener("click", () => { SEARCH.checkin = ""; renderCheckin(); });
+  const addToggle = $("#ci-add-toggle");
+  const addForm = $("#am-form");
+  if (addToggle && addForm) {
+    addToggle.addEventListener("click", () => {
+      addForm.classList.toggle("hidden");
+      if (!addForm.classList.contains("hidden")) $("#am-name").focus();
+    });
+    addForm.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      showFieldErrs("am", null);
+      const btn = $("#am-submit");
+      btn.disabled = true;
+      try {
+        const r = await api("/api/members", { method: "POST", body: JSON.stringify({
+          name: $("#am-name").value.trim(),
+          phone: $("#am-phone").value.trim(),
+          plan: $("#am-plan").value,
+        }) });
+        if (r.ok) {
+          const m = r.data.member;
+          toast("✅ " + m.name + " added — their PHG number is " + m.code + ". Tell them this number.");
+          addForm.reset();
+          addForm.classList.add("hidden");
+          SEARCH.checkin = "";
+          const si = $("#search-checkin"); if (si) si.value = "";
+          await refreshCiLists();
+        } else {
+          showFieldErrs("am", r.data.fields);
+          if (!r.data.fields) toast(r.data.detail || "Could not add the member. Please try again.");
+        }
+      } finally { btn.disabled = false; }
+    });
+  }
   paintCiList();
 }
 async function refreshCiLists(){
   const [members, today] = await Promise.all([api("/api/members"), api("/api/checkins/today")]);
   if (members.ok) DATA.members = members.data.members || [];
   if (today.ok) DATA.today = today.data.checkins || [];
+  const it = $("#ci-in-today");
+  if (it) it.textContent = DATA.today.length + " in today";
   paintCiList();
 }
 function paintCiList(){
@@ -782,8 +1047,7 @@ function paintCiList(){
   if (!hits.length) { box.innerHTML = noMatchHTML(SEARCH.checkin); return; }
   box.innerHTML = hits.map(m =>
     '<div class="row-card"><div class="avatar">' + esc(initials(m.name)) + '</div>' +
-    '<div class="row-main"><div class="row-name">' + esc(m.name) + '</div><div class="row-sub">' + esc(m.code) + " · " + esc(daysAgoText(m)) + "</div>" + addonTags(m) + "</div>" +
-    '<button class="icon-btn" data-qr="' + m.id + '" type="button" aria-label="Show QR code"><svg viewBox="0 0 24 24"><path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v3h-3v-3zm-5 5h3v3h-3v-3zm5 0h3v3h-3v-3z"/></svg></button>' +
+    '<div class="row-main"><div class="row-name">' + esc(m.name) + '</div><div class="row-sub">' + esc(m.code) + " · " + esc(daysAgoText(m)) + "</div></div>" +
     (MODE === "manual"
       ? (m.checked_in_today
           ? '<button class="chip-present" data-unmark="' + m.id + '" type="button">Present ✓</button>'
@@ -793,7 +1057,6 @@ function paintCiList(){
           : '<button class="chip-mark" data-ci="' + m.id + '" type="button">Check In</button>')) +
     "</div>"
   ).join("");
-  box.querySelectorAll("[data-qr]").forEach(b => b.addEventListener("click", () => openQRModal(Number(b.dataset.qr))));
   box.querySelectorAll("[data-ci]").forEach(b => b.addEventListener("click", () => doCheckIn(Number(b.dataset.ci), refreshCiLists)));
   box.querySelectorAll("[data-mark]").forEach(b => b.addEventListener("click", () => doCheckIn(Number(b.dataset.mark), refreshCiLists)));
   box.querySelectorAll("[data-unmark]").forEach(b => b.addEventListener("click", async () => {
@@ -881,59 +1144,6 @@ async function doExtend(id){
   await doRenew(id, days);
 }
 
-/* ================= ADD-ONS ================= */
-async function renderAddons(){
-  const el = $("#screen-addons");
-  const [addons, members] = await Promise.all([api("/api/addons"), api("/api/members")]);
-  if (!addons.ok) return;
-  DATA.addons = addons.data; DATA.members = members.data.members || [];
-  el.innerHTML =
-    "<h1 style='font-size:24px;margin-bottom:6px'>Add-On <span class='grad-text'>Services</span></h1>" +
-    '<p class="sub" style="margin-bottom:16px">Extra services members can buy on top of their plan — extra income for the gym, every month.</p>' +
-    '<div class="card" style="margin-bottom:16px;text-align:center"><div class="small" style="font-weight:700;letter-spacing:.05em">ADD-ON REVENUE / MONTH</div>' +
-    '<div style="font-size:34px;font-weight:900;margin-top:4px" class="grad-text">' + inr(addons.data.revenue_month) + "</div></div>" +
-    '<div class="shortcut-grid" style="grid-template-columns:1fr 1fr">' +
-    addons.data.catalog.map(a =>
-      '<div class="card" style="margin:0"><div style="font-size:26px">' + a.icon + '</div>' +
-      '<div style="font-weight:800;font-size:15.5px;margin-top:7px;line-height:1.3">' + esc(a.name) + "</div>" +
-      '<div class="row-sub">' + inr(a.price) + "/month</div>" +
-      '<div class="row-sub" style="margin:7px 0 11px">' + a.member_count + " member" + (a.member_count === 1 ? "" : "s") + " using it</div>" +
-      '<button class="btn btn-grad btn-sm" data-assign="' + a.id + '" type="button" style="width:100%">Assign to Member</button></div>'
-    ).join("") + "</div>" +
-    '<div class="section-head"><h2>Active Subscriptions</h2><span class="small">' + addons.data.active.length + " active</span></div>" +
-    searchHTML("addons", "Search subscriptions… (member name)") +
-    '<p class="showing" id="ad-showing"></p><div id="ad-subs"></div>';
-  el.querySelectorAll("[data-assign]").forEach(b => b.addEventListener("click", () => openAssignModal(b.dataset.assign)));
-  const inp = $("#search-addons");
-  inp.addEventListener("input", () => { SEARCH.addons = inp.value; paintSubs(); });
-  const clr = $("#clear-addons");
-  if (clr) clr.addEventListener("click", () => { SEARCH.addons = ""; renderAddons(); });
-  paintSubs();
-}
-function paintSubs(){
-  const box = $("#ad-subs");
-  if (!box || !DATA.addons) return;
-  const q = SEARCH.addons.trim().toLowerCase();
-  const hits = DATA.addons.active.filter(s => !q || s.member_name.toLowerCase().includes(q) || s.addon_name.toLowerCase().includes(q));
-  const sh = $("#ad-showing");
-  if (sh) sh.textContent = q ? "Showing " + hits.length + " of " + DATA.addons.active.length + " subscriptions" : "";
-  if (!hits.length) {
-    box.innerHTML = q ? noMatchHTML(SEARCH.addons) : emptyHTML("➕", "No add-ons assigned yet", "Tap “Assign to Member” on any service above to get started.");
-    return;
-  }
-  box.innerHTML = hits.map(s =>
-    '<div class="row-card"><div class="avatar">' + esc(initials(s.member_name)) + '</div>' +
-    '<div class="row-main"><div class="row-name">' + esc(s.member_name) + '</div><div class="row-sub">' + esc(s.addon_name) + "</div></div>" +
-    '<div class="amount">' + inr(s.price) + '<span class="small">/mo</span></div>' +
-    '<button class="x-btn" data-unsub="' + s.sub_id + '" type="button" aria-label="Remove add-on">✕</button></div>'
-  ).join("");
-  box.querySelectorAll("[data-unsub]").forEach(b => b.addEventListener("click", async () => {
-    const r = await api("/api/addons/subs/" + b.dataset.unsub, { method: "DELETE" });
-    if (r.ok) { toast("Add-on removed."); await renderAddons(); }
-    else toast(r.data.detail || "Could not remove. Please try again.");
-  }));
-}
-
 /* ================= Modals & QR ================= */
 function openModal(html){
   $("#modal-root").innerHTML = '<div class="modal-overlay" id="modal-overlay"><div class="modal-card">' + html + "</div></div>";
@@ -969,56 +1179,6 @@ function drawQR(el, text){
   finder(0, 0); finder(N - 7, 0); finder(0, N - 7);
   el.appendChild(canvas);
 }
-function openQRModal(memberId){
-  const m = DATA.members.find(x => x.id === memberId);
-  if (!m) return;
-  openModal(
-    "<h3>" + esc(m.name) + "</h3>" +
-    '<p class="small" style="margin-bottom:14px">Member code · ' + esc(m.code) + " · " + esc(m.plan) + " plan · Expires " + esc(fmtDate(m.expiry_date)) + "</p>" +
-    '<div class="qr-box" id="modal-qr"></div>' +
-    '<div style="text-align:center;font-weight:900;font-size:21px;letter-spacing:.16em;margin-top:13px">' + esc(m.code) + "</div>" +
-    (m.addons.length ? '<p class="small" style="text-align:center;margin-top:7px">Add-ons: ' + esc(m.addons.map(a => a.addon_name).join(", ")) + "</p>" : "") +
-    '<p class="small" style="text-align:center;margin-top:9px">The member shows this code at the door to check in.</p>' +
-    '<button class="btn btn-ghost" id="modal-close" type="button" style="width:100%;margin-top:15px">Close</button>'
-  );
-  drawQR($("#modal-qr"), m.code);
-  $("#modal-close").addEventListener("click", closeModal);
-}
-function openAssignModal(addonId){
-  const addon = DATA.addons.catalog.find(a => a.id === addonId);
-  if (!addon) return;
-  const have = new Set(DATA.addons.active.filter(s => s.addon_id === addonId).map(s => s.member_id));
-  openModal(
-    "<h3>Assign " + esc(addon.name) + "</h3>" +
-    '<p class="small" style="margin-bottom:13px">' + inr(addon.price) + "/month · Tap a member to assign it.</p>" +
-    '<div class="search-wrap"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>' +
-    '<input type="text" id="assign-search" placeholder="Search members… (name or code)" maxlength="60" autocomplete="off"></div>' +
-    '<div id="assign-list"></div>' +
-    '<button class="btn btn-ghost" id="modal-close" type="button" style="width:100%;margin-top:6px">Cancel</button>'
-  );
-  const paint = () => {
-    const q = ($("#assign-search").value || "").trim().toLowerCase();
-    const hits = DATA.members.filter(m => !q || m.name.toLowerCase().includes(q) || m.code.toLowerCase().includes(q));
-    const box = $("#assign-list");
-    box.innerHTML = hits.length ? hits.map(m =>
-      '<div class="row-card"><div class="avatar">' + esc(initials(m.name)) + '</div>' +
-      '<div class="row-main"><div class="row-name">' + esc(m.name) + '</div><div class="row-sub">' + esc(m.code) + "</div></div>" +
-      (have.has(m.id)
-        ? '<span class="small" style="font-weight:700">Already added</span>'
-        : '<button class="chip-mark" data-assign-member="' + m.id + '" type="button">Assign</button>') +
-      "</div>"
-    ).join("") : noMatchHTML(q);
-    box.querySelectorAll("[data-assign-member]").forEach(b => b.addEventListener("click", async () => {
-      const r = await api("/api/addons/assign", { method: "POST", body: JSON.stringify({ member_id: Number(b.dataset.assignMember), addon_id: addonId }) });
-      if (r.ok) { toast(r.data.message); closeModal(); await renderAddons(); }
-      else toast(r.data.detail || "Could not assign. Please try again.");
-    }));
-  };
-  $("#assign-search").addEventListener("input", paint);
-  $("#modal-close").addEventListener("click", closeModal);
-  paint();
-}
-
 /* ================= Entry flow: signup / details / upgrade ================= */
 let PLANS_CACHE = null;
 let UP_PERIOD = "monthly";
@@ -1031,6 +1191,7 @@ async function loadPlans(){
   return PLANS_CACHE || [];
 }
 function planPrice(p, period){ return period === "monthly" ? p.monthly : p.yearly; }
+function payMethodLabel(m){ return m === "razorpay" ? "Razorpay" : m === "collected_in_person" ? "our team, in person" : m === "face_unlock" ? "Farhan's face scan" : m === "upi_qr" ? "UPI QR" : "online payment"; }
 function planCardHTML(p, period, btnLabel, btnOff){
   const pop = p.badge ? " pop" : "";
   const badge = p.badge ? '<span class="plan-badge">' + esc(p.badge).toUpperCase() + "</span>" : "";
@@ -1042,52 +1203,198 @@ function planCardHTML(p, period, btnLabel, btnOff){
     '<button type="button" class="btn ' + (p.badge ? "btn-grad" : "btn-deep") + '" data-choose="' + esc(p.id) + '"' + (btnOff ? " disabled" : "") + ">" + esc(btnLabel) + "</button></div>";
 }
 
-/* ---- UPI QR payment panel (Upgrade flow + Plan & Billing) ---- */
+/* ---- Payment panel (Upgrade flow + Plan & Billing) ----
+   The QR payment page: Farhan's UPI QR + the plan/amount + ONE
+   action, the Pay button. ONE RULE EVERYWHERE (owner's order,
+   2026-10-23): no face, no unlock — and the panel NEVER unlocks by
+   itself (no polling, no timers, no passive completion). Pay leaves
+   this page for the DEDICATED face-scan page ("Scan Farhan's Face");
+   only a verified scan there records the activation, and cancelling
+   returns here, still locked. */
 let PAY_CTX = null; // { planId, period, onDone }
 function openPaymentPanel(planId, period, onDone){
   const p = (PLANS_CACHE || []).find(x => x.id === planId);
   if (!p) { toast("Plan details could not load. Please try again."); return; }
-  PAY_CTX = { planId, period, onDone };
+  PAY_CTX = { planId, period, onDone, fromApp: !(document.getElementById("app-view") || {}).classList?.contains("hidden") };
   const amount = planPrice(p, period);
   const perLabel = period === "monthly" ? "Monthly" : "Yearly";
   openModal(
     "<h3>Pay for " + esc(p.name) + "</h3>" +
-    '<p class="small">' + perLabel + ' plan · Pay with any UPI app.</p>' +
+    '<p class="small">' + perLabel + ' plan · Farhan\'s face scan unlocks your gym the moment your payment is collected.</p>' +
+    '<div class="pay-visual" id="pay-visual"><div class="pay-done-badge">Payment Done ✓</div>' +
     '<div class="pay-qr-card"><img src="/payment-qr.png" alt="UPI payment QR code" id="pay-qr-img">' +
-    '<div class="pay-qr-fallback" id="pay-qr-fallback">Payment QR<br>coming soon</div></div>' +
-    '<p style="text-align:center;font-size:14px;margin-top:10px">Scan with any UPI app — <strong>GPay, PhonePe, Paytm</strong></p>' +
+    '<div class="pay-qr-fallback" id="pay-qr-fallback">Payment QR<br>coming soon</div></div></div>' +
+    '<div id="pay-scan-note"><p style="text-align:center;font-size:14px;margin-top:10px">Scan with any UPI app — <strong>GPay, PhonePe, Paytm</strong></p></div>' +
     '<div style="text-align:center;font-size:27px;font-weight:900;margin:8px 0 2px">₹' + amount.toLocaleString("en-IN") + "</div>" +
     '<p class="small" style="text-align:center">' + esc(p.name) + " plan · " + perLabel + "</p>" +
-    '<button type="button" class="btn btn-grad" id="pay-done" style="margin-top:16px">I Have Paid ✓</button>' +
-    '<button type="button" class="btn btn-ghost" id="pay-later" style="width:100%;margin-top:10px">Pay Later</button>'
+    '<p class="small" style="text-align:center;margin-top:8px">Pay by the QR above, or pay when our team visits your gym. Then tap <strong>Pay</strong> — Farhan\'s face scan turns this screen green and opens your app.</p>' +
+    '<div class="pay-status" id="pay-status"><span>Tap <strong>Pay</strong> when Farhan is with you — his face scan is the unlock.</span></div>' +
+    '<button type="button" class="btn btn-grad" id="pay-face-btn" style="width:100%;margin-top:12px">Pay — Unlock by Face Scan</button>' +
+    '<button type="button" class="btn btn-ghost" id="pay-back" style="width:100%;margin-top:12px">‹ Back to plans</button>'
   );
   const img = $("#pay-qr-img");
   img.addEventListener("error", () => { img.style.display = "none"; $("#pay-qr-fallback").style.display = "block"; });
-  $("#pay-done").addEventListener("click", () => submitPayment("/api/subscription/confirm-payment"));
-  $("#pay-later").addEventListener("click", () => submitPayment("/api/subscription/pay-later"));
+  $("#pay-back").addEventListener("click", () => { stopFaceCamera(); PAY_CTX = null; closeModal(); });
+  $("#pay-face-btn").addEventListener("click", openFaceScanPage);
 }
-async function submitPayment(path){
+function setPayStatus(text, done){
+  const st = $("#pay-status");
+  if (!st) return;
+  st.classList.toggle("done", !!done);
+  st.innerHTML = (done ? "" : '<span class="spin"></span>') + "<span>" + esc(text) + "</span>";
+}
+async function onPaymentConfirmed(data){
   if (!PAY_CTX) return;
-  const doneBtn = $("#pay-done"), laterBtn = $("#pay-later");
-  if (doneBtn) doneBtn.disabled = true;
-  if (laterBtn) laterBtn.disabled = true;
-  try {
-    const r = await api(path, { method: "POST", body: JSON.stringify({ plan_id: PAY_CTX.planId, period: PAY_CTX.period }) });
-    if (r.ok) {
-      if (ME) ME.plan_chosen = true;
-      const cb = PAY_CTX.onDone;
-      closeModal();
-      toast(r.data.message || "Done!");
-      if (cb) await cb(r.data);
-    } else {
-      toast(r.data.detail || "Something went wrong. Please try again.");
-      if (doneBtn) doneBtn.disabled = false;
-      if (laterBtn) laterBtn.disabled = false;
-    }
-  } catch (e) {
-    if (doneBtn) doneBtn.disabled = false;
-    if (laterBtn) laterBtn.disabled = false;
+  const cb = PAY_CTX.onDone;
+  PAY_CTX = null;
+  const visual = $("#pay-visual");
+  if (visual) visual.classList.add("paid");
+  setPayStatus("Payment Done ✓ — unlocking your gym…", true);
+  if (ME) ME.plan_chosen = true;
+  GATE_STATUS = null;
+  await new Promise(res => setTimeout(res, 700)); // a beat on the green card
+  playUnlockAnimation(() => { closeModal(); if (cb) cb(data); });
+}
+/* The Pay button's destination: the DEDICATED face-scan page
+   (owner's flow order, 2026-10-23): QR payment page -> Pay -> the
+   "Scan Farhan's Face" page -> verified -> green Payment Done ->
+   unlock animation -> dashboard. Cancel/failure returns to the QR
+   page, still locked. The panel itself never scans and never
+   unlocks. */
+async function openFaceScanPage(){
+  const statusEl = $("#pay-status");
+  const plan = await api("/api/plan").catch(() => null);
+  if (!plan || !plan.ok) {
+    if (statusEl) statusEl.innerHTML = "<span>Could not check face unlock just now. Please try again.</span>";
+    return;
   }
+  if (!plan.data.face_unlock_available) {
+    if (statusEl) statusEl.innerHTML = "<span>Face unlock is not set up yet — ask Do Gym to complete setup.</span>";
+    return;
+  }
+  closeModal();
+  const done = $("#facescan-done"); if (done) done.classList.add("hidden");
+  showView("facescan");
+  runFaceScanPage();
+}
+function backToQrPage(msg){
+  stopFaceCamera();
+  if (!PAY_CTX) { showView("upgrade"); return; }
+  const { planId, period, onDone, fromApp } = PAY_CTX;
+  showView(fromApp ? "app" : "upgrade");
+  openPaymentPanel(planId, period, onDone);
+  if (msg) { const st = $("#pay-status"); if (st) st.innerHTML = "<span>" + esc(msg) + "</span>"; }
+}
+async function runFaceScanPage(){
+  const status = (t, done) => {
+    const el = $("#scan-face-status");
+    if (el) el.innerHTML = (done ? "" : '<span class="spin"></span>') + "<span>" + esc(t) + "</span>";
+  };
+  const bail = (msg) => backToQrPage(msg);
+  try {
+    status("Loading the face tools…");
+    await loadFaceModels();
+    const tpl = await api("/api/face-unlock/template");
+    if (!tpl.ok || !tpl.data.enrolled) { bail("Face unlock is not set up yet — ask Do Gym to complete setup."); return; }
+    const enrolled = tpl.data.descriptors.map(d => Float32Array.from(d));
+    const ch = await api("/api/face-unlock/challenge", { method: "POST" });
+    if (!ch.ok) { bail(ch.data.detail || "Could not start the scan. Please try again."); return; }
+    const challenge = ch.data;
+    const video = $("#scan-face-video");
+    FACE_STREAM = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+    video.srcObject = FACE_STREAM;
+    await video.play();
+    const actionText = { blink: "please BLINK once", turn_left: "please turn your head LEFT", turn_right: "please turn your head RIGHT" }[challenge.action] || "please blink once";
+    status("Farhan, look at the camera… then " + actionText + ".");
+    const deadline = Date.now() + 45000;
+    let earOpen = null, blinkClosed = false, livenessDone = false;
+    while (Date.now() < deadline) {
+      const view = document.getElementById("facescan-view");
+      if (!view || view.classList.contains("hidden")) { stopFaceCamera(); return; } // left the page
+      const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+      if (det) {
+        const dist = Math.min(...enrolled.map(d => faceDistance(det.descriptor, d)));
+        const lm = det.landmarks;
+        if (challenge.action === "blink") {
+          const ear = (eyeAspectRatio(lm.getLeftEye()) + eyeAspectRatio(lm.getRightEye())) / 2;
+          if (earOpen === null || ear > earOpen) earOpen = ear;
+          if (earOpen > 0.24 && ear < earOpen * 0.72) blinkClosed = true;
+          if (blinkClosed && ear > earOpen * 0.85) livenessDone = true;
+        } else {
+          const nosePts = lm.getNose();
+          const nose = nosePts[3] || nosePts[0];
+          const box = det.detection.box;
+          const offset = (nose.x - (box.x + box.width / 2)) / box.width;
+          if (challenge.action === "turn_left" && offset < -0.07) livenessDone = true;
+          if (challenge.action === "turn_right" && offset > 0.07) livenessDone = true;
+        }
+        if (dist <= challenge.threshold && livenessDone) {
+          status("Face matched ✓ — confirming with the server…");
+          const v = await api("/api/face-unlock/verify", {
+            method: "POST",
+            body: JSON.stringify({ challenge_id: challenge.challenge_id, distance: dist, liveness: challenge.action }),
+          });
+          stopFaceCamera();
+          if (v.ok) {
+            const doneEl = $("#facescan-done"); if (doneEl) doneEl.classList.remove("hidden");
+            status("Payment Done ✓ — unlocking your gym…", true);
+            await new Promise(r => setTimeout(r, 700)); // a beat on the green state
+            await onPaymentConfirmed(v.data);
+            return;
+          }
+          bail(v.data.detail || "That scan did not confirm. Please tap Pay and try again.");
+          return;
+        }
+        status(dist <= challenge.threshold ? "Face matched — now " + actionText + "." : "Farhan, look at the camera… then " + actionText + ".");
+      }
+      await new Promise(r => setTimeout(r, 200));
+    }
+    bail("That took too long. Please tap Pay and try the scan again.");
+  } catch (e) {
+    bail("The camera could not start. Please allow camera access on this device and tap Pay again.");
+  }
+}
+const _scanCancelBtn = $("#scan-face-cancel");
+if (_scanCancelBtn) _scanCancelBtn.addEventListener("click", () => backToQrPage("Scan cancelled — your gym is still locked. Tap Pay when Farhan is ready."));
+/* ---------------- Face unlock helpers (owner side) ----------------
+   Used by the payment panel's Pay button — the ONE owner-screen
+   unlock path. The camera on THIS device matches Farhan's face
+   locally (face-api, served from /static/face — no CDN) against his
+   enrolled template, with the server-chosen liveness beat (blink /
+   head turn). The server issues
+   a single-use 120s challenge and records the activation itself
+   (method face_unlock) — this page never just claims "matched". */
+let FACE_STREAM = null;
+let FACE_MODELS_OK = false;
+function stopFaceCamera(){
+  if (FACE_STREAM) { FACE_STREAM.getTracks().forEach(t => t.stop()); FACE_STREAM = null; }
+}
+function loadFaceApi(){
+  return new Promise((resolve, reject) => {
+    if (window.faceapi) return resolve();
+    const s = document.createElement("script");
+    s.src = "/static/face/face-api.min.js";
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("face tools failed to load"));
+    document.head.appendChild(s);
+  });
+}
+async function loadFaceModels(){
+  if (FACE_MODELS_OK) return;
+  await loadFaceApi();
+  await faceapi.nets.tinyFaceDetector.loadFromUri("/static/face");
+  await faceapi.nets.faceLandmark68Net.loadFromUri("/static/face");
+  await faceapi.nets.faceRecognitionNet.loadFromUri("/static/face");
+  FACE_MODELS_OK = true;
+}
+function faceDistance(a, b){
+  let s = 0;
+  for (let i = 0; i < a.length; i++) { const d = a[i] - b[i]; s += d * d; }
+  return Math.sqrt(s);
+}
+function eyeAspectRatio(eye){
+  const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
+  return (dist(eye[1], eye[5]) + dist(eye[2], eye[4])) / (2 * dist(eye[0], eye[3]));
 }
 function showFieldErrs(scope, fields){
   document.querySelectorAll('[id^="err-' + scope + '-"]').forEach(e => { e.textContent = ""; e.classList.remove("show"); });
@@ -1127,7 +1434,7 @@ $("#signup-form").addEventListener("submit", async (ev) => {
     const r = await api("/api/signup", { method: "POST", body: JSON.stringify(body) });
     if (r.ok) {
       $("#s-password").value = "";
-      toast("Account created! Now tell us about your gym.");
+      toast("Account created! We have sent an OTP to your email.");
       await routeAfterAuth();
     } else {
       if (r.data.fields) showFieldErrs("s", r.data.fields);
@@ -1209,6 +1516,19 @@ $("#details-form").addEventListener("submit", async (ev) => {
 async function openUpgrade(){
   UP_PERIOD = "monthly";
   showView("upgrade");
+  const note = $("#up-note"), sub = $("#up-sub");
+  if (GATE_STATUS) {
+    note.textContent = GATE_MSGS[GATE_STATUS] || GATE_MSGS.unpaid;
+    note.classList.remove("hidden");
+    if (sub) sub.textContent = GATE_STATUS === "expired"
+      ? "Renew your plan to keep your gym running — pick a plan and complete the payment."
+      : GATE_STATUS === "switched_off"
+        ? "Your members and data are safe — Do Gym can restart your plan the moment you ask."
+        : "Pick your plan and complete the payment to unlock your gym.";
+  } else {
+    note.classList.add("hidden");
+    if (sub) sub.textContent = "One last step — pick the plan that fits your gym. You can change it anytime from Plan & Billing.";
+  }
   await renderUpgrade();
 }
 async function renderUpgrade(){
@@ -1235,21 +1555,28 @@ async function renderPlan(){
   const cur = plans.find(p => p.id === s.plan_id) || {};
   const used = s.usage.members_used, limit = s.usage.member_limit;
   const pct = limit ? Math.min(100, Math.round(used / limit * 100)) : 100;
-  const statusLabel = s.payment_status === "payment_pending" ? "Payment pending"
+  const statusLabel = s.subscription_status === "expired" ? "Expired — renewal due"
+    : s.subscription_status === "switched_off" ? "Switched Off"
+    : s.subscription_status === "payment_pending" ? "Payment due"
+    : s.subscription_status === "active" ? "Active"
     : (s.payment_status === "active" ? "Active" : s.status);
   const lp = s.last_payment;
   const lpPeriod = lp ? (lp.period === "monthly" ? "Monthly" : "Yearly") : "";
   let payBlock = "";
-  if (s.payment_status === "payment_pending") {
+  if (s.subscription_status === "expired") {
     payBlock =
-      '<p style="margin-top:12px"><span class="badge-pending">⚠ Payment pending</span></p>' +
-      (lp ? '<p class="small" style="margin-top:7px">' + inr(lp.amount) + " for the " + esc(lp.plan_name) + " plan (" + lpPeriod + ") is still to be paid.</p>" : "") +
-      '<button type="button" class="btn btn-grad" id="plan-paynow" style="margin-top:12px">Pay Now — ' + inr(s.price) + "</button>";
+      '<p style="margin-top:12px"><span class="badge-due">⏰ Plan expired</span></p>' +
+      '<p class="small" style="margin-top:7px">Your plan period ended on ' + esc(fmtFull(s.subscription_expires_on)) + '. Renew now to keep your gym running — nothing is deleted.</p>' +
+      '<button type="button" class="btn btn-grad" id="plan-paynow" style="margin-top:12px">Renew Now — ' + inr(s.price) + "</button>";
+  } else if (s.subscription_status === "switched_off") {
+    payBlock =
+      '<p style="margin-top:12px"><span class="badge-due">⏸ Switched Off</span></p>' +
+      '<p class="small" style="margin-top:7px">Your plan is currently off. Please contact Do Gym to restart. Your members and data are safe.</p>';
   } else if (lp && lp.status === "paid") {
     payBlock =
       '<p style="margin-top:12px"><span class="badge-active">✓ Active</span></p>' +
-      '<p class="small" style="margin-top:7px">Paid via UPI QR · ' + inr(lp.amount) + " · Active since " + esc(fmtFull(s.since || lp.date)) + "</p>" +
-      '<p class="small" style="margin-top:3px">Last payment: ' + esc(lp.plan_name) + " (" + lpPeriod + ") · " + inr(lp.amount) + " via UPI QR on " + esc(fmtFull(lp.date)) + "</p>";
+      '<p class="small" style="margin-top:7px">Paid via ' + payMethodLabel(lp.method) + ' · ' + inr(lp.amount) + " · Active since " + esc(fmtFull(s.since || lp.date)) + "</p>" +
+      '<p class="small" style="margin-top:3px">Last payment: ' + esc(lp.plan_name) + " (" + lpPeriod + ") · " + inr(lp.amount) + " via " + payMethodLabel(lp.method) + " on " + esc(fmtFull(lp.date)) + "</p>";
   }
   el.innerHTML =
     "<h1>Plan &amp; Billing 💎</h1>" +
@@ -1270,7 +1597,7 @@ async function renderPlan(){
       const label = isCur ? "✓ Current Plan" : (p.id === s.plan_id ? "Switch to " + (PLAN_PERIOD === "monthly" ? "Monthly" : "Yearly") : "Switch to " + p.name);
       return planCardHTML(p, PLAN_PERIOD, label, isCur);
     }).join("") +
-    '<p class="small" style="text-align:center">Prices in INR. GST extra as applicable. Cancel anytime.<br>Plan changes are paid by UPI QR — scan, pay, tap “I Have Paid”. Your last payment is shown above.</p>' +
+    '<p class="small" style="text-align:center">Prices in INR. GST extra as applicable. Cancel anytime.<br>Payments confirm themselves — your gym unlocks automatically the moment a payment completes. Your last payment is shown above.</p>' +
     '<div class="section-head"><h2>Settings ⚙️</h2></div>' +
     '<div class="card"><strong style="font-size:15px">Gym &amp; Owner Details</strong>' +
     '<p class="small" style="margin:6px 0 12px">Your gym name, address and your contact details.</p>' +
@@ -1282,12 +1609,8 @@ async function renderPlan(){
       await renderPlan();
       const m = $("#plan-msg");
       if (m) {
-        if (data.payment_status === "payment_pending") {
-          m.innerHTML = '<div class="hint-box" style="margin-bottom:14px">🕒 Saved! You are on the <strong>' + esc(data.plan.name) + "</strong> plan (" + (data.period === "monthly" ? "Monthly" : "Yearly") + ") with <strong>payment pending</strong> — pay anytime with the Pay Now button above.</div>";
-        } else {
-          const lp2 = data.last_payment;
-          m.innerHTML = '<div class="hint-box" style="margin-bottom:14px">✅ Paid via UPI QR! You are now on the <strong>' + esc(data.plan.name) + "</strong> plan (" + (data.period === "monthly" ? "Monthly" : "Yearly") + ")" + (lp2 ? " · " + inr(lp2.amount) : "") + " · Active since " + esc(fmtFull(data.since)) + ".</div>";
-        }
+        const lp2 = data.last_payment;
+        m.innerHTML = '<div class="hint-box" style="margin-bottom:14px">✅ Paid via ' + payMethodLabel(lp2 ? lp2.method : null) + '! You are now on the <strong>' + esc(data.plan.name) + "</strong> plan (" + (data.period === "monthly" ? "Monthly" : "Yearly") + ")" + (lp2 ? " · " + inr(lp2.amount) : "") + " · Active since " + esc(fmtFull(data.since)) + ".</div>";
       }
     });
   }));
@@ -1311,6 +1634,24 @@ async function initApp(){
     const cfg = await fetch("/api/config").then(r => r.json());
     if (cfg && cfg.show_demo_hint === false) $("#demo-hint").classList.add("hidden");
   } catch (e) { /* hint stays visible if config cannot load */ }
+  // Google sign-in: the "Continue with Google" button appears only when
+  // the server has it switched on (credentials configured server-side).
+  try {
+    const acfg = await fetch("/api/auth/config").then(r => r.json());
+    if (acfg && acfg.google_enabled) {
+      document.querySelectorAll(".google-auth").forEach(el => el.classList.remove("hidden"));
+    }
+  } catch (e) { /* button stays hidden if the config cannot load */ }
+  // A failed or cancelled Google sign-in returns here as /?auth_error=...
+  const authErr = new URLSearchParams(location.search).get("auth_error");
+  if (authErr) {
+    history.replaceState(null, "", location.pathname);
+    showLogin();
+    const eb = $("#login-error");
+    eb.textContent = authErr;
+    eb.classList.remove("hidden");
+    return;
+  }
   try {
     await routeAfterAuth();
   } catch (e) { showLogin(); }

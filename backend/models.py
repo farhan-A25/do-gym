@@ -1,7 +1,7 @@
 """SQLAlchemy models for the PowerHouse Gym Owner App."""
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -24,6 +24,37 @@ class User(Base):
     opening_year = Column(Integer, nullable=True)
     details_completed = Column(Boolean, default=False)
     plan_chosen = Column(Boolean, default=False)
+    # How this account was created: "email" (password signup, the
+    # default) or "google" (Continue with Google — email verified by
+    # Google). Shown as a badge on the admin control page.
+    auth_provider = Column(String(16), nullable=False, default="email")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # Canonical signup flow (owner's order, 2026-10-23): account created
+    # (Google or email) -> OTP to that email -> details -> payment.
+    # While True, everything except the OTP endpoints is blocked.
+    # Accounts that predate the OTP stage default to False (verified).
+    otp_pending = Column(Boolean, nullable=False, default=False)
+    # Session epoch: every issued session token carries it; logging
+    # out bumps it, invalidating all previously issued tokens at once.
+    session_epoch = Column(Integer, nullable=False, default=0)
+
+
+class OtpChallenge(Base):
+    """The live email-OTP challenge for one account (at most one row).
+
+    Only the HASH of the 6-digit code is stored (plus, ONLY when the
+    dev-only DEV_OTP_ECHO=1 flag is on, the plain code in dev_code so
+    tests/local dev can complete the flow without an SMTP server).
+    """
+
+    __tablename__ = "otp_challenges"
+
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    code_hash = Column(String(64), nullable=False)
+    dev_code = Column(String(8), nullable=True)
+    attempts = Column(Integer, nullable=False, default=0)
+    last_sent_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
 class Member(Base):
@@ -47,6 +78,7 @@ class CheckIn(Base):
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False, index=True)
     date = Column(Date, nullable=False, index=True)
     time_str = Column(String(16), nullable=False)  # display string, e.g. "07:15 AM"
+    source = Column(String(16), nullable=False, default="owner")  # owner | qr
 
     member = relationship("Member", back_populates="checkins")
 
@@ -92,11 +124,17 @@ class ManualClear(Base):
 
 
 class SubscriptionPayment(Base):
-    """One subscription payment event for using this app (UPI QR flow).
+    """One recorded subscription payment for using this app.
 
-    A row is written when the owner taps "I Have Paid" (status "paid") or
-    "Pay Later" (status "pending"). Amounts are always computed server-side
-    from billing.py — never taken from the client.
+    A row is written when a payment is CONFIRMED — by Razorpay's
+    webhook (method "razorpay") or, as a non-UI fallback, by the
+    owner's manual confirm endpoint (method "upi_qr"). Rows with status
+    "pending" exist only in databases created before the Pay Later
+    button was removed (2026-10-23) — the pay-first gate treats them as
+    UNPAID. Amounts are always computed server-side from billing.py —
+    never taken from the client. The gateway ids make webhook
+    deliveries idempotent: the same Razorpay payment id is never
+    recorded twice.
     """
     __tablename__ = "subscription_payments"
 
@@ -108,6 +146,30 @@ class SubscriptionPayment(Base):
     amount = Column(Integer, nullable=False)          # ₹, from billing.py
     method = Column(String(32), nullable=False, default="upi_qr")
     status = Column(String(16), nullable=False)       # paid | pending
+    gateway_order_id = Column(String(64), nullable=True)    # Razorpay order_…
+    gateway_payment_id = Column(String(64), nullable=True)  # Razorpay pay_…
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class GatewayOrder(Base):
+    """One Razorpay order created for a subscription checkout.
+
+    Written when the owner picks a plan and the server creates the
+    order (the owner's user id travels in the order notes, so the
+    webhook can be matched back to this gym). Status flips to "paid"
+    when Razorpay's webhook confirms the money; the matching
+    SubscriptionPayment row is what actually lifts the pay-first gate.
+    """
+    __tablename__ = "gateway_orders"
+
+    id = Column(Integer, primary_key=True)
+    order_id = Column(String(64), unique=True, nullable=False, index=True)
+    payment_id = Column(String(64), nullable=True)  # filled on capture
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    plan_id = Column(String(32), nullable=False)      # starter | pro
+    period = Column(String(16), nullable=False)       # monthly | yearly
+    amount = Column(Integer, nullable=False)          # ₹, from billing.py
+    status = Column(String(16), nullable=False, default="created")  # created | paid
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
@@ -125,3 +187,18 @@ class Meta(Base):
     key = Column(String(64), primary_key=True)
     value = Column(String(255), nullable=False)
     seeded = Column(Boolean, default=False)
+
+
+class FaceTemplate(Base):
+    """Farhan's enrolled face template for face unlock (singleton row).
+
+    ONLY the numeric face descriptors computed in his browser during
+    enrollment (a JSON list of 128-float arrays, one per pose) — never
+    a photo. Re-registering from Control replaces the descriptors.
+    """
+
+    __tablename__ = "face_templates"
+
+    id = Column(Integer, primary_key=True)
+    descriptors = Column(Text, nullable=False, default="[]")
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)

@@ -22,3 +22,23 @@ services:
       # Set to "false" once you run the gym with real data.
       - key: SEED_DEMO
         value: "true"
+      # Farhan's admin password for the /control page + admin API.
+      # sync: false = Render asks YOU to type it at deploy; it is never
+      # stored in this repo. While unset, /control does not exist.
+      - key: ADMIN_SECRET
+        sync: false
+      # Email OTP delivery (signup step 2). Set all five at deploy with
+      # a Gmail App Password (see README) or signups cannot receive
+      # their OTP codes. sync: false = Render asks you; never in repo.
+      - key: SMTP_HOST
+        value: "smtp.gmail.com"
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      # DEV_OTP_ECHO is deliberately NOT set here: OTP codes must only
+      # ever travel by email in production.
