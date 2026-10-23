@@ -55,7 +55,7 @@ def _user_count(email: str) -> int:
 def test_auth_config_reports_disabled_without_keys(client, google_off):
     r = client.get("/api/auth/config")
     assert r.status_code == 200
-    assert r.json() == {"google_enabled": False}
+    assert r.json() == {"google_enabled": False, "mail_configured": False}
 
 
 def test_google_start_disabled_is_a_friendly_redirect(client, google_off):
@@ -76,7 +76,7 @@ def test_google_callback_disabled_is_a_friendly_redirect(client, google_off):
 def test_auth_config_reports_enabled_with_keys(client, google_on):
     r = client.get("/api/auth/config")
     assert r.status_code == 200
-    assert r.json() == {"google_enabled": True}
+    assert r.json() == {"google_enabled": True, "mail_configured": False}
 
 
 def test_google_start_redirects_to_google_consent(client, google_on):

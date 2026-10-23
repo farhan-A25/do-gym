@@ -14,6 +14,7 @@ import os
 import re
 import secrets
 import shutil
+import sys
 import time
 from collections import defaultdict
 from datetime import date, datetime, timedelta
@@ -74,7 +75,8 @@ LOG_DIR = BASE_DIR.parent / "logs"
 BACKUP_DIR = BASE_DIR.parent / "backups"
 
 # ---------------------------------------------------------------------------
-# Logging: everything important goes to logs/app.log (rotating), nothing silent
+# Logging: everything important goes to logs/app.log (rotating) AND to
+# stderr (the host's log stream), nothing silent
 # ---------------------------------------------------------------------------
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 logger = logging.getLogger("powerhouse")
@@ -104,10 +106,21 @@ class _RedactFilter(logging.Filter):
 
 
 if not logger.handlers:
+    _formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
     _handler = RotatingFileHandler(LOG_DIR / "app.log", maxBytes=1_000_000, backupCount=3)
-    _handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    _handler.setFormatter(_formatter)
     _handler.addFilter(_RedactFilter())
     logger.addHandler(_handler)
+    # Mirror everything to stderr as well: the file alone is invisible
+    # to the host's log stream (Render shows the process output), which
+    # made mail delivery fail silently from outside — sent / failed /
+    # not-configured lines must be visible without shell access to the
+    # box. Only THIS logger gets the extra handler (uvicorn's own
+    # loggers are untouched), so its access logs are not duplicated.
+    _console = logging.StreamHandler(sys.stderr)
+    _console.setFormatter(_formatter)
+    _console.addFilter(_RedactFilter())
+    logger.addHandler(_console)
 logger.addFilter(_RedactFilter())
 
 
@@ -1032,8 +1045,14 @@ def _auth_error_redirect(message: str) -> RedirectResponse:
 
 @app.get("/api/auth/config")
 def auth_config():
-    """Public: which sign-in options the frontend should offer."""
-    return {"google_enabled": google_auth_enabled()}
+    """Public: which sign-in options the frontend should offer, and
+    whether outgoing mail is configured (a boolean only — never any
+    value or fragment of the SMTP settings) so a missing mail setup is
+    visible from outside instead of failing silently."""
+    return {
+        "google_enabled": google_auth_enabled(),
+        "mail_configured": _smtp_config() is not None,
+    }
 
 
 @app.get("/auth/google")

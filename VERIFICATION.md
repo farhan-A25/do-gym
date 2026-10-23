@@ -791,3 +791,6 @@ Plain-language summary: `SECURITY.md`. Attack tests:
   rejection, both directions of purpose separation, otp_pending
   preservation, pre-reset session rejection, and reachability
   while logged in and unpaid.
+
+## 24. Mail observability — console-mirrored logs + mail_configured flag (2026-10-23)
+- The "powerhouse" logger now mirrors every record to stderr alongside the rotating file (identical formatter and redaction, message text unchanged; uvicorn's own loggers untouched), so "… email sent … via SMTP", "… (SMTP not configured …)" and "… FAILED via SMTP" lines appear in the host (Render) log stream instead of being trapped in a file on the box; `GET /api/auth/config` additionally returns `"mail_configured"` — a boolean computed per-request from `_smtp_config()`, exposing no value/host/fragment of the SMTP settings — and the full suite is green at **159 passed** (was 155; +4 in tests/test_mail_observability.py covering mail_configured false with SMTP env absent, false with partial SMTP env, true with all SMTP_* set with no value leakage, and the console stream handler's presence; the two exact-shape assertions in tests/test_google_auth.py extended for the new key).
