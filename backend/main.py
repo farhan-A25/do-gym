@@ -332,6 +332,7 @@ GATE_OPEN_PATHS = {
     "/api/config", "/api/plans", "/api/auth/config",
     "/auth/google", "/auth/google/callback",
     "/api/login", "/api/signup", "/api/logout", "/api/me",
+    "/api/auth/forgot", "/api/auth/reset",
     "/api/details", "/api/plan", "/api/plan/switch",
     "/api/subscription/order",
     "/api/face-unlock/template",
@@ -1162,25 +1163,27 @@ def _otp_hash(user: models.User, code: str) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-def _deliver_otp(email: str, code: str) -> None:
-    """Send the OTP email, or log the code when SMTP is not configured
-    yet (pre-launch). Never raises — a delivery hiccup must not break
-    the signup flow."""
+def _deliver_code(email: str, code: str, subject: str, body: str, label: str) -> None:
+    """The one SMTP path every emailed code travels (signup OTP and
+    password-reset code alike). Never raises — a delivery hiccup must
+    not break the flow that issued the code. When SMTP is not
+    configured the code is logged ONLY under the dev-only DEV_OTP_ECHO
+    flag; in production it is never written anywhere."""
     cfg = _smtp_config()
     if cfg is None:
         if _dev_otp_echo():
             # Dev only: the echo flag exists so local dev/tests can
             # complete the flow without an SMTP server.
             logger.info(
-                "OTP for %s: %s (DEV_OTP_ECHO on — code logged for dev only)",
-                email, code,
+                "%s for %s: %s (DEV_OTP_ECHO on — code logged for dev only)",
+                label, email, code,
             )
         else:
             # Production without SMTP: the code is NEVER written to a
             # log or a response. (Publish step: set SMTP_* — see README.)
             logger.info(
-                "OTP issued for %s (SMTP not configured — code not logged; "
-                "set SMTP_* to email codes for real)", email,
+                "%s issued for %s (SMTP not configured — code not logged; "
+                "set SMTP_* to email codes for real)", label, email,
             )
         return
     try:
@@ -1190,19 +1193,43 @@ def _deliver_otp(email: str, code: str) -> None:
         msg = EmailMessage()
         msg["From"] = cfg["from"]
         msg["To"] = email
-        msg["Subject"] = "Your Do Gym OTP"
-        msg.set_content(
-            f"Your Do Gym one-time passcode is {code}.\n\n"
-            "It works for 10 minutes. If you did not ask for it, "
-            "you can ignore this email.\n"
-        )
+        msg["Subject"] = subject
+        msg.set_content(body)
         with smtplib.SMTP(cfg["host"], cfg["port"], timeout=15) as server:
             server.starttls()
             server.login(cfg["user"], cfg["pass"])
             server.send_message(msg)
-        logger.info("OTP email sent to %s via SMTP", email)
+        logger.info("%s email sent to %s via SMTP", label, email)
     except Exception:
-        logger.exception("OTP email to %s FAILED via SMTP", email)
+        logger.exception("%s email to %s FAILED via SMTP", label, email)
+
+
+def _deliver_otp(email: str, code: str) -> None:
+    """Send the signup OTP email (see _deliver_code for the shared
+    SMTP path and the no-SMTP logging rules)."""
+    _deliver_code(
+        email, code,
+        "Your Do Gym OTP",
+        f"Your Do Gym one-time passcode is {code}.\n\n"
+        "It works for 10 minutes. If you did not ask for it, "
+        "you can ignore this email.\n",
+        "OTP",
+    )
+
+
+def _deliver_password_reset(email: str, code: str) -> None:
+    """Send the password-reset code email — same SMTP path as the
+    signup OTP, its own subject and wording."""
+    _deliver_code(
+        email, code,
+        "Reset your Do Gym password",
+        f"Your Do Gym password-reset code is {code}.\n\n"
+        "It works for 10 minutes. Enter it on the Forgot Password "
+        "screen to set a new password.\n\n"
+        "If you did not ask for it, you can ignore this email — "
+        "your password stays unchanged.\n",
+        "Password-reset code",
+    )
 
 
 def _otp_challenge(db: Session, user: models.User):
@@ -1345,6 +1372,158 @@ def otp_verify(
     db.commit()
     logger.info("OTP verified for %s — details/payment stage unlocked", user.email)
     return {"ok": True, **user_payload(user)}
+
+
+# ---------------------------------------------------------------------------
+# Password reset — "Forgot password?" on the login screen.
+#
+# POST /api/auth/forgot {email}: if the account exists, a 6-digit
+# reset code is generated and emailed through the SAME SMTP path as
+# the signup OTP. The response is ALWAYS the same generic success —
+# whether the account exists or not, and whether a rate limit or the
+# resend cooldown quietly swallowed the send — so this endpoint can
+# never be used to probe which emails have accounts.
+#
+# POST /api/auth/reset {email, code, new_password}: the code is
+# checked with the signup OTP's rules (hashed, 10 minutes, 5
+# attempts) and, on success, the password hash is replaced, the code
+# is consumed, and the account's session epoch is bumped — every
+# existing session dies at once, exactly like logout. The email is
+# NOT verified by a reset: an account still in the signup-OTP stage
+# stays otp_pending and lands back on that stage at next login.
+#
+# Purpose separation is structural: reset codes live in their own
+# table (PasswordResetChallenge) and are hashed with a "pwreset:"
+# domain prefix, so a signup OTP can never reset a password and a
+# reset code can never verify an email — even if the digits matched.
+# ---------------------------------------------------------------------------
+RESET_GENERIC_MESSAGE = (
+    "If an account with this email exists, a reset code has been sent."
+)
+
+
+def _reset_hash(user: models.User, code: str) -> str:
+    raw = f"pwreset:{user.id}:{user.email.lower()}:{code}".encode()
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _reset_challenge(db: Session, user: models.User):
+    return (
+        db.query(models.PasswordResetChallenge)
+        .filter(models.PasswordResetChallenge.user_id == user.id)
+        .first()
+    )
+
+
+def _issue_password_reset(db: Session, user: models.User) -> str:
+    """Generate a fresh reset code (replacing any old one), deliver
+    it, and return the plain code (used only by tests via dev_code)."""
+    code = f"{secrets.randbelow(900000) + 100000:06d}"
+    now = datetime.now()
+    row = _reset_challenge(db, user)
+    if row is None:
+        row = models.PasswordResetChallenge(user_id=user.id)
+        db.add(row)
+    row.code_hash = _reset_hash(user, code)
+    row.dev_code = code if _dev_otp_echo() else None
+    row.attempts = 0
+    row.last_sent_at = now
+    row.expires_at = now + OTP_TTL
+    db.commit()
+    _deliver_password_reset(user.email, code)
+    return code
+
+
+class ForgotIn(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+
+
+@app.post("/api/auth/forgot")
+def forgot_password(body: ForgotIn, request: Request, db: Session = Depends(get_db)):
+    """Ask for a password-reset code. ALWAYS answers the same
+    generic success (see the section comment): the rate limits and
+    the 60-second resend cooldown throttle the SENDING, never the
+    answer, so nothing about the account leaks."""
+    ip = request.client.host if request.client else "unknown"
+    email = body.email.strip().lower()
+    generic = {"ok": True, "message": RESET_GENERIC_MESSAGE}
+    if login_rate_limited("forgot:" + ip):
+        logger.info("Forgot-password send throttled (per-IP limit)")
+        return generic
+    if login_rate_limited("forgot-email:" + email):
+        logger.info("Forgot-password send throttled (per-email limit)")
+        return generic
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if user is None:
+        return generic
+    row = _reset_challenge(db, user)
+    if row is not None:
+        waited = (datetime.now() - row.last_sent_at).total_seconds()
+        if waited < OTP_RESEND_COOLDOWN:
+            # A fresh code is already in the inbox — keep it valid
+            # instead of burning it with a re-issue.
+            return generic
+    _issue_password_reset(db, user)
+    return generic
+
+
+class ResetIn(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    code: str = Field(min_length=4, max_length=8)
+    new_password: str = Field(min_length=1, max_length=200)
+
+
+def _reset_invalid() -> JSONResponse:
+    """The ONE reset failure answer — wrong code, expired code,
+    spent code, unknown account: indistinguishable from outside."""
+    return _otp_err(
+        400,
+        "That code is not correct or has expired. "
+        "Please check it, or ask for a new one.",
+        "reset_invalid",
+    )
+
+
+@app.post("/api/auth/reset")
+def reset_password(body: ResetIn, request: Request, db: Session = Depends(get_db)):
+    """Set a new password with a reset code. On success every
+    existing session for the account is invalidated (session epoch
+    bump, the logout mechanism); the account's otp_pending state is
+    deliberately left untouched."""
+    ip = request.client.host if request.client else "unknown"
+    if login_rate_limited("reset:" + ip):
+        return err(429, "Too many attempts. Please wait a minute and try again.")
+    if len(body.new_password) < 6:
+        return field_error(
+            {"new_password": "Please choose a password of at least 6 characters."},
+            "Please check the highlighted fields.",
+        )
+    email = body.email.strip().lower()
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if user is None:
+        return _reset_invalid()
+    row = _reset_challenge(db, user)
+    if row is None or row.expires_at <= datetime.now():
+        return _reset_invalid()
+    if row.attempts >= OTP_MAX_ATTEMPTS:
+        return _reset_invalid()
+    if not hmac.compare_digest(_reset_hash(user, body.code.strip()), row.code_hash):
+        row.attempts += 1
+        db.commit()
+        logger.info(
+            "Password-reset verify failed for %s (%d attempt(s) left)",
+            user.email, OTP_MAX_ATTEMPTS - row.attempts,
+        )
+        return _reset_invalid()
+    user.password_hash = hash_password(body.new_password)
+    # Invalidate EVERY existing session for this account at once —
+    # a password reset must kick out anyone holding an old cookie
+    # (the very scenario a reset usually answers).
+    user.session_epoch = int(getattr(user, "session_epoch", 0) or 0) + 1
+    db.delete(row)
+    db.commit()
+    logger.info("Password reset completed for %s — all sessions invalidated", user.email)
+    return {"ok": True}
 
 
 @app.get("/api/me")

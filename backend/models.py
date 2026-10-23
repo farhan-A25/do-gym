@@ -57,6 +57,29 @@ class OtpChallenge(Base):
     expires_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class PasswordResetChallenge(Base):
+    """The live password-reset challenge for one account (at most one
+    row) — written by POST /api/auth/forgot, consumed by
+    POST /api/auth/reset.
+
+    Deliberately a SEPARATE table from OtpChallenge (the signup OTP):
+    reset codes and signup codes live in different tables and are
+    hashed with different domain prefixes, so a code issued for one
+    purpose can never be spent on the other. Same storage rules as
+    the signup OTP: only the HASH is kept (plus the plain code in
+    dev_code ONLY when the dev-only DEV_OTP_ECHO=1 flag is on).
+    """
+
+    __tablename__ = "password_reset_challenges"
+
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    code_hash = Column(String(64), nullable=False)
+    dev_code = Column(String(8), nullable=True)
+    attempts = Column(Integer, nullable=False, default=0)
+    last_sent_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 class Member(Base):
     __tablename__ = "members"
 

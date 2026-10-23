@@ -733,3 +733,61 @@ Plain-language summary: `SECURITY.md`. Attack tests:
   dashboard with nothing recorded. The in-card scan box is gone
   (asserted in tests).
 - Backend challenge/verify endpoints unchanged.
+
+## 23. Forgot Password — reset by emailed code (2026-10-23)
+
+- **Why:** Farhan's own live launch testing got his test account
+  stuck — there was no way back into an account whose password was
+  forgotten. Now there is, built entirely from the existing OTP/auth
+  machinery (same SMTP path, same code rules, same session-epoch
+  mechanism as logout).
+- **Endpoints:** `POST /api/auth/forgot {email}` and
+  `POST /api/auth/reset {email, code, new_password}`. Both sit in
+  GATE_OPEN_PATHS — password recovery is never paywalled and never
+  OTP-gated.
+- **No account enumeration (asserted in tests):** forgot answers one
+  generic success body for known AND unknown emails, in all modes
+  (the response never carries the code, not even under
+  DEV_OTP_ECHO); an unknown email creates no challenge row and
+  sends nothing. Per-IP and per-email send throttles (existing
+  login limiter, prefixed buckets) plus the 60-second resend
+  cooldown throttle the sending only — never the answer; a resend
+  inside the cooldown keeps the first code valid (asserted).
+- **Code rules = signup OTP rules (asserted):** 6 digits, stored
+  SHA-256-hashed (64-hex, never the plain code), 10-minute TTL,
+  5 attempts counted per wrong try, expired/spent code refused with
+  one generic `reset_invalid` error, code consumed on success
+  (replay refused). A too-short new password is rejected with the
+  signup field error BEFORE any attempt is burned (asserted).
+- **Purpose separation (asserted both directions):** reset codes
+  live in a new `password_reset_challenges` table and are hashed
+  with a `pwreset:` domain prefix — spending a signup OTP at
+  /api/auth/reset fails, spending a reset code at
+  /api/auth/otp/verify fails, and the reset hasher fed the signup
+  code cannot reproduce the signup hash.
+- **Session invalidation (asserted):** a successful reset replaces
+  the bcrypt hash and bumps `session_epoch` — a cookie issued
+  before the reset gets 401 from /api/me; old password login fails,
+  new password login succeeds.
+- **Not a verification (asserted):** resetting the password of an
+  OTP-pending account leaves `otp_pending` true — next login with
+  the new password still lands on the signup-OTP stage.
+- **Delivery:** `_deliver_otp` was refactored onto a shared
+  `_deliver_code` (one SMTP path, unchanged log lines/subject for
+  the signup OTP); reset mail goes out as "Reset your Do Gym
+  password" through the same path and the same no-SMTP rules (code
+  never logged unless DEV_OTP_ECHO=1).
+- **Frontend (served-page structure mirrors the OTP screen):**
+  "Forgot password?" link on the login card → `forgot-view` with
+  step 1 (email + Send reset code) and step 2 (6-digit code + new
+  password with the .pw-eye show/hide toggle + Set new password),
+  a resend link with the same 60s countdown display as the OTP
+  screen, back-to-login on both steps, and success returning to
+  login with the toast "Password changed ✓ — log in with your new
+  password."
+- **Tests:** tests/test_password_reset.py (10 tests) covers the
+  full flow, unknown-email indistinguishability, cooldown
+  behaviour, attempt counting/lockout, expiry, short-password
+  rejection, both directions of purpose separation, otp_pending
+  preservation, pre-reset session rejection, and reachability
+  while logged in and unpaid.

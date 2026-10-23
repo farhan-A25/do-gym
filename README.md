@@ -86,6 +86,17 @@ When the payment gate lifts (face unlock, Control activation, or the dormant web
 
 ---
 
+## Password reset ("Forgot password?")
+
+The login screen carries a **Forgot password?** link. The owner enters their account email → the server emails a **6-digit reset code** (same SMTP path as the signup OTP) → they enter the code + a new password on the same screen.
+
+- `POST /api/auth/forgot` **always** answers the same generic success — *"If an account with this email exists, a reset code has been sent."* — whether the account exists or not, and whether a rate limit/cooldown quietly swallowed the send. It can never be used to probe which emails have accounts. Sends are rate-limited per IP and per email, with the signup OTP's 60-second resend cooldown.
+- `POST /api/auth/reset` checks the code under the signup OTP's rules (stored **hashed**, **10 minutes**, **max 5 attempts**, one generic failure answer for wrong/expired/spent codes). New password rule is signup's: **at least 6 characters**.
+- **Purpose separation:** reset codes live in their own table and are hashed with a different domain prefix — a signup OTP can never reset a password, and a reset code can never verify an email.
+- **On success** the password hash is replaced, the code is consumed, and the account's **session epoch is bumped — every existing session dies at once** (the owner logs in fresh with the new password). A reset does **not** verify the email: an account still in the signup-OTP stage stays there and meets the OTP screen at next login.
+
+---
+
 ## Optional: automatic online payment (Razorpay) — dormant
 
 Built, tested, and **off** until configured. It is NOT the launch model (the panel never shows a checkout button — Farhan collects in person); it exists so a gym could one day pay online and unlock with nobody present.

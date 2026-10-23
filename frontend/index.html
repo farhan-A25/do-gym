@@ -247,6 +247,7 @@ nav.bottom button.on .dot{opacity:1}
         <span class="pw-wrap"><input id="login-password" type="password" name="password" placeholder="Your password" autocomplete="current-password" maxlength="100" required><button type="button" class="pw-eye" data-pw="login-password" aria-label="Show password">👁</button></span>
       </div>
       <button class="btn btn-grad" type="submit" id="login-btn">Log In</button>
+      <button class="link-btn" id="go-forgot" type="button" style="margin-top:10px">Forgot password?</button>
       <div class="hint-box" id="demo-hint"><strong>Demo login</strong> — Email: owner@powerhousegym.in<br>Password: Gym@2026</div>
     </form>
     <p class="cookie-note">We use one small cookie to keep you logged in securely. No tracking, no ads, ever.</p>
@@ -351,6 +352,35 @@ nav.bottom button.on .dot{opacity:1}
     </form>
     <p class="small" style="text-align:center;margin-top:16px">Didn't get the email? <button type="button" class="link-btn" id="otp-resend">Resend OTP</button> <span id="otp-resend-note"></span></p>
     <button class="link-btn" id="otp-logout" type="button" style="margin-top:10px">Log out</button>
+  </div>
+
+  <!-- ================= FORGOT PASSWORD ================= -->
+  <div id="forgot-view" class="hidden">
+    <div class="logo-mark">🔑</div>
+    <h1>Forgot your <span class="grad-text">password?</span></h1>
+    <p class="sub" style="margin-top:7px">Enter the email on your gym account and we'll send a 6-digit reset code. Then set a new password — you'll be logged out everywhere and can log in fresh.</p>
+    <form id="forgot-form" style="margin-top:18px" novalidate>
+      <div id="forgot-error" class="error-box hidden"></div>
+      <div id="forgot-note" class="hint-box hidden" style="margin:0 0 14px"></div>
+      <div id="forgot-step1">
+        <div class="field"><label for="forgot-email">Email</label>
+          <input id="forgot-email" type="email" placeholder="you@yourgym.in" autocomplete="username" maxlength="255">
+        </div>
+        <button class="btn btn-grad" type="submit" id="forgot-send-btn">Send reset code</button>
+      </div>
+      <div id="forgot-step2" class="hidden">
+        <p class="sub" style="margin:0 0 14px">Enter the 6-digit code we sent to <strong id="forgot-email-echo"></strong> — it works for 10 minutes.</p>
+        <div class="field"><label for="forgot-code">6-digit reset code</label>
+          <input id="forgot-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" style="letter-spacing:.45em;text-align:center;font-size:22px;font-weight:800">
+        </div>
+        <div class="field"><label for="forgot-password">New password</label>
+          <span class="pw-wrap"><input id="forgot-password" type="password" placeholder="At least 6 characters" autocomplete="new-password" maxlength="100"><button type="button" class="pw-eye" data-pw="forgot-password" aria-label="Show password">👁</button></span>
+          <p class="field-err" id="err-forgot-new_password"></p></div>
+        <button class="btn btn-grad" type="submit" id="forgot-reset-btn">Set new password</button>
+        <p class="small" style="text-align:center;margin-top:16px">Didn't get the email? <button type="button" class="link-btn" id="forgot-resend">Resend code</button> <span id="forgot-resend-note"></span></p>
+      </div>
+    </form>
+    <button class="link-btn" id="forgot-back" type="button" style="margin-top:10px">‹ Back to login</button>
   </div>
 
   <!-- ================= UPGRADE / CHOOSE PLAN ================= -->
@@ -479,7 +509,7 @@ function toast(msg){
 /* ---------------- Views & entry flow routing ---------------- */
 let ME = null;
 let APP_INITED = false;
-const FLOW_VIEWS = ["login", "signup", "otp", "details", "upgrade", "facescan", "app"];
+const FLOW_VIEWS = ["login", "signup", "otp", "forgot", "details", "upgrade", "facescan", "app"];
 function showView(name){
   FLOW_VIEWS.forEach(v => { const el = document.getElementById(v + "-view"); if (el) el.classList.toggle("hidden", v !== name); });
   window.scrollTo({ top: 0 });
@@ -595,6 +625,118 @@ $("#otp-logout").addEventListener("click", async () => {
   ME = null;
   showLogin();
   toast("You have been logged out safely.");
+});
+
+/* ---------------- Forgot password (reset by emailed code) ----------------
+   Step 1 asks for the email; the server ALWAYS answers the same
+   generic success (account or not), so this screen never reveals
+   which emails have accounts. Step 2 takes the 6-digit code + a new
+   password. A successful reset logs the account out everywhere —
+   the server says so and the next login uses the new password. */
+let FORGOT_EMAIL = "";
+let FORGOT_RESEND_TIMER = null;
+function forgotResendCountdown(seconds){
+  const btn = $("#forgot-resend"), note = $("#forgot-resend-note");
+  if (!btn) return;
+  clearInterval(FORGOT_RESEND_TIMER);
+  let left = Math.max(0, Math.floor(seconds || 0));
+  const paint = () => {
+    if (left > 0) { btn.disabled = true; note.textContent = "— new code in " + left + "s"; }
+    else { btn.disabled = false; note.textContent = ""; clearInterval(FORGOT_RESEND_TIMER); }
+  };
+  paint();
+  if (left > 0) FORGOT_RESEND_TIMER = setInterval(() => { left -= 1; paint(); }, 1000);
+}
+function openForgot(){
+  showView("forgot");
+  $("#forgot-error").classList.add("hidden");
+  $("#forgot-note").classList.add("hidden");
+  $("#forgot-step1").classList.remove("hidden");
+  $("#forgot-step2").classList.add("hidden");
+  $("#forgot-code").value = "";
+  $("#forgot-password").value = "";
+  $("#err-forgot-new_password").textContent = "";
+  const typed = $("#login-email").value.trim();
+  if (typed) $("#forgot-email").value = typed;
+  setTimeout(() => { const i = $("#forgot-email"); if (i) i.focus(); }, 60);
+}
+$("#go-forgot").addEventListener("click", openForgot);
+$("#forgot-back").addEventListener("click", () => showLogin());
+$("#forgot-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const errBox = $("#forgot-error");
+  errBox.classList.add("hidden");
+  $("#err-forgot-new_password").textContent = "";
+  if ($("#forgot-step2").classList.contains("hidden")) {
+    /* ---- step 1: ask for the reset code ---- */
+    const email = $("#forgot-email").value.trim();
+    if (!email) {
+      errBox.textContent = "Please enter the email on your gym account.";
+      errBox.classList.remove("hidden");
+      return;
+    }
+    const btn = $("#forgot-send-btn");
+    btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Sending…';
+    try {
+      const r = await api("/api/auth/forgot", { method: "POST", body: JSON.stringify({ email }) });
+      if (r.ok) {
+        FORGOT_EMAIL = email;
+        $("#forgot-email-echo").textContent = email;
+        const note = $("#forgot-note");
+        note.textContent = r.data.message || "If an account with this email exists, a reset code has been sent.";
+        note.classList.remove("hidden");
+        $("#forgot-step1").classList.add("hidden");
+        $("#forgot-step2").classList.remove("hidden");
+        forgotResendCountdown(60);
+        setTimeout(() => { const i = $("#forgot-code"); if (i) i.focus(); }, 60);
+      } else {
+        errBox.textContent = (r.data && r.data.detail) || "Something went wrong. Please try again.";
+        errBox.classList.remove("hidden");
+      }
+    } finally { btn.disabled = false; btn.textContent = "Send reset code"; }
+    return;
+  }
+  /* ---- step 2: code + new password ---- */
+  const code = $("#forgot-code").value.trim();
+  const pw = $("#forgot-password").value;
+  if (!/^\d{6}$/.test(code)) {
+    errBox.textContent = "Please enter the 6-digit code from your email.";
+    errBox.classList.remove("hidden");
+    return;
+  }
+  if (pw.length < 6) {
+    $("#err-forgot-new_password").textContent = "Please choose a password of at least 6 characters.";
+    return;
+  }
+  const btn = $("#forgot-reset-btn");
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Saving…';
+  try {
+    const r = await api("/api/auth/reset", { method: "POST", body: JSON.stringify({ email: FORGOT_EMAIL, code, new_password: pw }) });
+    if (r.ok) {
+      $("#forgot-password").value = "";
+      $("#forgot-code").value = "";
+      $("#login-email").value = FORGOT_EMAIL;
+      showLogin();
+      toast("Password changed ✓ — log in with your new password.");
+    } else if (r.data && r.data.fields && r.data.fields.new_password) {
+      $("#err-forgot-new_password").textContent = r.data.fields.new_password;
+    } else {
+      errBox.textContent = (r.data && r.data.detail) || "That code did not work. Please try again.";
+      errBox.classList.remove("hidden");
+    }
+  } finally { btn.disabled = false; btn.textContent = "Set new password"; }
+});
+$("#forgot-resend").addEventListener("click", async () => {
+  const btn = $("#forgot-resend");
+  btn.disabled = true;
+  const r = await api("/api/auth/forgot", { method: "POST", body: JSON.stringify({ email: FORGOT_EMAIL }) }).catch(() => null);
+  if (r && r.ok) {
+    toast("A fresh reset code is on its way to your email.");
+    forgotResendCountdown(60);
+  } else {
+    toast("Please wait a moment before resending.");
+    forgotResendCountdown(30);
+  }
 });
 
 /* ---------------- Animated unlock (canonical flow step 5) ----------------
