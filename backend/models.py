@@ -80,6 +80,26 @@ class PasswordResetChallenge(Base):
     expires_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class AdminAction(Base):
+    """Audit trail for Farhan's Control support actions (2026-10-23).
+
+    One row per support action taken from /control or the admin API:
+    what was done, which account it hit, and when. Deliberately stores
+    NO secrets — never a password, never a code — only the fact that
+    the action happened, so the trail itself can never leak a rescue
+    credential.
+    """
+
+    __tablename__ = "admin_actions"
+
+    id = Column(Integer, primary_key=True)
+    action = Column(String(64), nullable=False)
+    target_user_id = Column(Integer, nullable=True)
+    target_email = Column(String(255), nullable=False, default="")
+    detail = Column(String(255), nullable=False, default="")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 class Member(Base):
     __tablename__ = "members"
 

@@ -302,6 +302,7 @@ async def csrf_origin_check(request: Request, call_next):
             path.startswith("/api/")
             and not path.startswith("/api/webhooks/")
             and not path.startswith("/api/admin/")
+            and not path.startswith("/api/control/")
         ):
             origin = request.headers.get("origin")
             if origin:
@@ -383,6 +384,7 @@ async def subscription_gate(request: Request, call_next):
     path = request.url.path
     if (
         path.startswith("/api/admin/")
+        or path.startswith("/api/control/")
         or path.startswith("/checkin/")
         or not path.startswith("/api/")
     ):
@@ -2237,6 +2239,7 @@ def _account_dict(db: Session, user: models.User) -> dict:
         "gym_name": user.gym_name or "",
         "mobile": user.mobile or "",
         "auth_provider": user.auth_provider or "email",
+        "otp_pending": bool(getattr(user, "otp_pending", False)),
         "joined": user.created_at.isoformat() if user.created_at else None,
         **_account_subscription(db, user),
     }
@@ -2414,6 +2417,106 @@ def admin_switch_off(body: AdminActivateIn, request: Request, db: Session = Depe
     set_revoked(db, user.id, True)
     db.commit()
     logger.info("Admin SWITCHED OFF %s — locked immediately, all data kept", user.email)
+    return {"ok": True, "account": _account_dict(db, user), "summary": _admin_summary(db)}
+
+
+# ---------------------------------------------------------------------------
+# Control support actions (2026-10-23) — Farhan's rescue tools, for the
+# day an owner's emailed code never arrives (spam folder, dead inbox,
+# SMTP trouble): email must never be a hard blocker when Farhan is
+# standing in the gym with the owner in front of him. Same guard as
+# every other admin API (ADMIN_SECRET unset → 404; secret header OR
+# the /control admin session cookie + its CSRF value), plus the shared
+# login rate limiter. Every action writes an AdminAction audit row —
+# action, target account, timestamp; NEVER a password or a code.
+# ---------------------------------------------------------------------------
+def _record_admin_action(db: Session, action: str, user: models.User, detail: str = "") -> None:
+    db.add(models.AdminAction(
+        action=action,
+        target_user_id=user.id,
+        target_email=user.email,
+        detail=detail,
+    ))
+
+
+class AdminVerifyEmailIn(BaseModel):
+    csrf: str = Field(default="", max_length=256)
+
+
+class AdminTempPasswordIn(BaseModel):
+    password: str = Field(min_length=1, max_length=200)
+    csrf: str = Field(default="", max_length=256)
+
+
+def _admin_support_guard(body_csrf: str, request: Request):
+    """Shared gate for the support actions: (auth, None) for Farhan,
+    else (None, response) — rate limit, admin guard and CSRF, in the
+    same shape as the other admin endpoints."""
+    ip = request.client.host if request.client else "unknown"
+    if login_rate_limited("admin-support:" + ip):
+        return None, err(429, "Too many attempts. Please wait a minute and try again.")
+    auth, deny = _admin_api_guard(request)
+    if deny is not None:
+        return None, deny
+    if not _admin_csrf_ok(auth, body_csrf):
+        return None, err(403, "Admin session check failed. Please reload the control page.")
+    return auth, None
+
+
+@app.post("/api/control/gyms/{user_id}/verify-email")
+def control_verify_email(
+    user_id: int, body: AdminVerifyEmailIn, request: Request, db: Session = Depends(get_db)
+):
+    """Mark one account's email verified from Control: exactly the
+    end-state of a successful OTP entry — otp_pending cleared and the
+    pending OTP challenge deleted — so the owner walks straight on to
+    details/payment. Only meaningful while the account IS pending;
+    anything else is a clear 400 (nothing to rescue)."""
+    _auth, deny = _admin_support_guard(body.csrf, request)
+    if deny is not None:
+        return deny
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user is None:
+        return err(404, "Gym account not found.")
+    if not getattr(user, "otp_pending", False):
+        return err(400, "This account's email is already verified — no OTP is pending for it.")
+    row = _otp_challenge(db, user)
+    if row is not None:
+        db.delete(row)
+    user.otp_pending = False
+    _record_admin_action(db, "verify_email", user)
+    db.commit()
+    logger.info("Admin verified the email of %s from Control (OTP stage cleared)", user.email)
+    return {"ok": True, "account": _account_dict(db, user), "summary": _admin_summary(db)}
+
+
+@app.post("/api/control/gyms/{user_id}/temp-password")
+def control_temp_password(
+    user_id: int, body: AdminTempPasswordIn, request: Request, db: Session = Depends(get_db)
+):
+    """Set a temporary password for one account from Control — same
+    semantics as an emailed reset: the hash is replaced (bcrypt, the
+    signup path's helper, the signup minimum length) and the session
+    epoch is bumped so every existing session dies at once. The
+    account's otp_pending state is deliberately NOT touched: a
+    still-pending account still owes its OTP (or a Verify email here),
+    exactly like after a normal password reset."""
+    _auth, deny = _admin_support_guard(body.csrf, request)
+    if deny is not None:
+        return deny
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user is None:
+        return err(404, "Gym account not found.")
+    if len(body.password) < 6:
+        return err(400, "Please choose a password of at least 6 characters.")
+    user.password_hash = hash_password(body.password)
+    user.session_epoch = int(getattr(user, "session_epoch", 0) or 0) + 1
+    _record_admin_action(db, "temp_password", user)
+    db.commit()
+    logger.info(
+        "Admin set a temporary password for %s from Control — all sessions invalidated",
+        user.email,
+    )
     return {"ok": True, "account": _account_dict(db, user), "summary": _admin_summary(db)}
 
 
@@ -2773,6 +2876,27 @@ def _control_dashboard_html(db: Session, csrf: str, msg: str = "") -> str:
                 '<input type="hidden" name="face_liveness" value="">'
                 '<button class="btn btn-on" type="submit">Activate</button></form>'
             )
+        if a["otp_pending"]:
+            otp_line = (
+                '<br>Email OTP: <b>pending</b> — the owner has not entered '
+                "the emailed code. If it never arrived, tap Verify email below."
+            )
+        else:
+            otp_line = ""
+        support = ""
+        if a["otp_pending"]:
+            support += (
+                '<form method="post" class="act support-verify" '
+                f'data-user-id="{a["user_id"]}" data-csrf="{e(csrf)}">'
+                '<button class="btn btn-on" type="submit">Verify email</button></form>'
+            )
+        support += (
+            '<form method="post" class="act support-temp-pw" '
+            f'data-user-id="{a["user_id"]}" data-csrf="{e(csrf)}">'
+            '<input type="password" name="temp_password" autocomplete="new-password" '
+            'placeholder="Temporary password (6+ characters)">'
+            '<button class="btn btn-on" type="submit">Set temp password</button></form>'
+        )
         parts.append(
             '<div class="card"><div class="gym-head"><div>'
             f'<div class="gym-name">{e(a["gym_name"] or "—")}</div>'
@@ -2782,7 +2906,8 @@ def _control_dashboard_html(db: Session, csrf: str, msg: str = "") -> str:
             f'Owner: <b>{e(a["owner_name"] or "—")}</b> · {e(a["email"])}<br>'
             f'Mobile: <b>{e(a["mobile"] or "—")}</b> · Joined: <b>{e(_fmt_date(a["joined"]))}</b><br>'
             f'Plan: <b>{e(a["plan_name"])} ({e(a["period"])})</b> · {e(expiry)}'
-            "</div>" + action + "</div>"
+            + otp_line
+            + "</div>" + action + support + "</div>"
         )
     if not summary["accounts"]:
         parts.append('<div class="card"><p class="muted">No gym accounts yet.</p></div>')
@@ -2809,6 +2934,27 @@ def _control_dashboard_html(db: Session, csrf: str, msg: str = "") -> str:
         'if(b.dataset.armed)return;ev.preventDefault();b.dataset.armed="1";'
         'b.textContent="Tap again to confirm — switch off "+f.dataset.gym+"?";'
         'b.classList.add("armed");});});'
+        "</script>"
+        "<script>"
+        'function ctlSupport(url,payload,okMsg){'
+        'fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},'
+        'body:JSON.stringify(payload)})'
+        '.then(function(r){return r.json().then(function(j){'
+        'var m=r.ok?okMsg:(j&&j.detail?j.detail:"That did not work. Please try again.");'
+        'location.href="/control?msg="+encodeURIComponent(m);});})'
+        '.catch(function(){location.href="/control?msg="'
+        '+encodeURIComponent("Network problem — please try again.");});}'
+        'document.querySelectorAll("form.support-verify").forEach(function(f){'
+        'f.addEventListener("submit",function(ev){ev.preventDefault();'
+        'ctlSupport("/api/control/gyms/"+f.dataset.userId+"/verify-email",'
+        '{csrf:f.dataset.csrf},'
+        '"Email verified \\u2713 — the owner can log in and continue.");});});'
+        'document.querySelectorAll("form.support-temp-pw").forEach(function(f){'
+        'f.addEventListener("submit",function(ev){ev.preventDefault();'
+        'var pw=f.querySelector("input[name=temp_password]").value;'
+        'ctlSupport("/api/control/gyms/"+f.dataset.userId+"/temp-password",'
+        '{csrf:f.dataset.csrf,password:pw},'
+        '"Temporary password set \\u2713 — all old sessions signed out.");});});'
         "</script></div></body></html>"
     )
     return "".join(parts)
@@ -2823,9 +2969,10 @@ def _behind_https(request: Request) -> bool:
 
 
 def _set_admin_cookies(resp: Response, request: Request) -> None:
-    """One signed admin token, set once per scope (page + admin API)."""
+    """One signed admin token, set once per scope (page + admin API
+    + control support API)."""
     token, _csrf = create_admin_token()
-    for path in ("/control", "/api/admin"):
+    for path in ("/control", "/api/admin", "/api/control"):
         resp.set_cookie(
             ADMIN_COOKIE, token, max_age=ADMIN_MAX_AGE,
             httponly=True, samesite="lax", path=path,
@@ -2834,7 +2981,7 @@ def _set_admin_cookies(resp: Response, request: Request) -> None:
 
 
 def _clear_admin_cookies(resp: Response) -> None:
-    for path in ("/control", "/api/admin"):
+    for path in ("/control", "/api/admin", "/api/control"):
         resp.delete_cookie(ADMIN_COOKIE, path=path)
 
 

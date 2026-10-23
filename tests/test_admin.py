@@ -190,9 +190,10 @@ def test_admin_cookie_scoping_and_logout(client, admin_on):
     }, follow_redirects=False)
     assert r.status_code == 303
     cookies = [c for c in r.headers.get_list("set-cookie") if c.startswith("phg_admin=")]
-    assert len(cookies) == 2  # one per scope: /control and /api/admin
+    assert len(cookies) == 3  # one per scope: /control, /api/admin, /api/control
     assert any("Path=/control" in c for c in cookies)
     assert any("Path=/api/admin" in c for c in cookies)
+    assert any("Path=/api/control" in c for c in cookies)
     assert all("HttpOnly" in c for c in cookies)
     # The cookie opens the dashboard…
     r = client.get("/control")
