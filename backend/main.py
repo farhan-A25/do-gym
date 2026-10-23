@@ -1117,8 +1117,11 @@ def google_callback(
     if user is None:
         # First Google sign-in: create the account. There is no password —
         # Google verifies identity — so a random, unknown hash fills the
-        # (non-null) column and password login simply never matches. The
-        # entry flow then collects gym & owner details, like a fresh signup.
+        # (non-null) column and password login simply never matches.
+        # Google's verified email IS the verification (his order,
+        # superseding the earlier Google -> OTP -> details flow): the
+        # account is born verified, no OTP is issued, and the entry flow
+        # goes straight to collecting gym & owner details.
         user = models.User(
             email=email,
             password_hash=hash_password(secrets.token_urlsafe(32)),
@@ -1126,26 +1129,39 @@ def google_callback(
             auth_provider="google",
             details_completed=False,
             plan_chosen=False,
-            otp_pending=True,  # his order: Google verify -> OTP -> details
+            otp_pending=False,
         )
         db.add(user)
         db.commit()
         db.refresh(user)
         logger.info("New gym signed up via Google: %s", email)
-        _issue_otp(db, user)
     else:
         logger.info("Login via Google for %s", email)
-        if getattr(user, "otp_pending", False) and _otp_live(db, user) is None:
-            _issue_otp(db, user)
+        if getattr(user, "otp_pending", False):
+            # Google just proved ownership of this inbox (an unverified
+            # email was refused above), so a pending OTP stage — e.g.
+            # from an earlier email signup whose code never arrived —
+            # is cleared on the spot: the exact end-state of a
+            # successful OTP entry, challenge row deleted.
+            row = _otp_challenge(db, user)
+            if row is not None:
+                db.delete(row)
+            user.otp_pending = False
+            db.commit()
+            logger.info(
+                "Google sign-in verified %s — pending OTP stage cleared", email
+            )
     return _session_redirect(request, user)
 
 
 # ---------------------------------------------------------------------------
-# Email OTP — stage 2 of the canonical signup flow (owner's order,
-# 2026-10-23): (1) account created via Google or email/password,
-# (2) a 6-digit OTP is generated and sent to that email and the owner
-# enters it here, (3) only then Gym & Owner Details, (4) payment,
-# (5) the animated unlock. One consistent rule for both signup routes.
+# Email OTP — stage 2 of the email/password signup flow: (1) account
+# created via email/password, (2) a 6-digit OTP is generated and sent
+# to that email and the owner enters it here, (3) only then Gym &
+# Owner Details, (4) payment, (5) the animated unlock. The Google
+# route no longer passes through this stage (owner's new order,
+# superseding the earlier Google -> OTP -> details flow): Google
+# sign-in verifies by itself — see google_callback above.
 #
 # Delivery: real email via SMTP when SMTP_HOST / SMTP_PORT /
 # SMTP_USER / SMTP_PASS / SMTP_FROM are set (a Gmail App Password

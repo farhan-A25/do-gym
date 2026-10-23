@@ -111,6 +111,7 @@ def test_callback_creates_new_user_and_enters_details_stage(client, google_on, m
     body = me.json()
     assert body["email"] == "newgym@example.com"  # stored lower-cased
     assert body["owner_name"] == "Priya Nair"
+    assert body["otp_pending"] is False  # Google's verified email verifies
     assert body["details_completed"] is False
     assert body["plan_chosen"] is False
     assert _user_count("newgym@example.com") == 1

@@ -1,7 +1,9 @@
-"""Email OTP — stage 2 of the canonical signup flow (owner's order,
-2026-10-23): (1) account created — Google or email/password —
-(2) OTP generated and sent to that email, owner enters it,
-(3) details, (4) payment, (5) animated unlock, (6) the app.
+"""Email OTP — stage 2 of the email/password signup flow:
+(1) account created by email/password, (2) OTP generated and sent
+to that email, owner enters it, (3) details, (4) payment,
+(5) animated unlock, (6) the app. The Google route skips this stage
+entirely (owner's new order, superseding Google -> OTP -> details):
+Google sign-in verifies by itself — see the google section below.
 
 Enforcement is server-side: while otp_pending, details/payment/app
 are all 403 (code otp_required). Codes are stored hashed, live 10
@@ -207,34 +209,63 @@ def _google_callback(client):
     return r
 
 
-def test_google_new_account_goes_through_otp_then_details(client, google_on):
+def test_google_new_account_is_verified_by_google_no_otp(client, google_on):
     _google_callback(client)
     me = client.get("/api/me").json()
-    assert me["otp_pending"] is True  # his order: Google -> OTP -> details
+    # Google's verified email IS the verification (owner's new order):
+    # the account is born verified — no OTP stage, no challenge row.
+    assert me["otp_pending"] is False
     assert me["email"] == GOOGLE_USER["email"]
+    assert _challenge_row(GOOGLE_USER["email"]) is None
 
-    r = client.put("/api/details", json=DETAILS)
-    assert r.status_code == 403 and r.json()["code"] == "otp_required"
-
-    r = client.post("/api/auth/otp/send")
-    assert r.status_code == 200
-    r = client.post("/api/auth/otp/verify", json={"code": r.json()["dev_otp"]})
-    assert r.status_code == 200
+    # The OTP gate is already passed: details save straight away.
     r = client.put("/api/details", json=DETAILS)
     assert r.status_code == 200, r.text
 
 
-def test_google_returning_verified_user_skips_otp(client, google_on, monkeypatch):
+def test_google_returning_user_stays_verified_no_otp(client, google_on, monkeypatch):
     monkeypatch.setattr(main, "fetch_google_userinfo", lambda token: {
         "email": "otp-google-returning@test.in",
         "email_verified": True,
         "name": "Returning Owner",
     })
     _google_callback(client)
-    r = client.post("/api/auth/otp/send")
-    code = r.json()["dev_otp"]
-    assert client.post("/api/auth/otp/verify", json={"code": code}).status_code == 200
+    assert client.get("/api/me").json()["otp_pending"] is False
     client.post("/api/logout")
     _google_callback(client)  # same Google account again
     me = client.get("/api/me").json()
-    assert me["otp_pending"] is False  # already verified once — no OTP again
+    assert me["otp_pending"] is False  # verified by Google — no OTP, ever
+
+
+def test_google_signin_verifies_pending_email_account(client, google_on, monkeypatch):
+    # An email signup whose code never arrived sits otp_pending with a
+    # live challenge; signing in with Google for the SAME email proves
+    # inbox ownership and clears the stage on the spot.
+    email = "otp-pending-then-google@test.in"
+    data = _signup(client, email)
+    assert data["otp_pending"] is True
+    assert _challenge_row(email) is not None
+    client.post("/api/logout")
+
+    monkeypatch.setattr(main, "fetch_google_userinfo", lambda token: {
+        "email": email, "email_verified": True, "name": "Otp Owner",
+    })
+    _google_callback(client)
+
+    me = client.get("/api/me").json()
+    assert me["otp_pending"] is False
+    assert _challenge_row(email) is None  # pending challenge deleted
+    # ... and the account passes the OTP gate:
+    r = client.put("/api/details", json=DETAILS)
+    assert r.status_code == 200, r.text
+
+
+def test_email_signup_still_goes_through_otp(client):
+    # Regression: the email/password route is unchanged by the Google
+    # change — signup still lands in the OTP stage with a live code
+    # outstanding and the gate shut.
+    data = _signup(client, "otp-email-regression@test.in")
+    assert data["otp_pending"] is True
+    assert _challenge_row("otp-email-regression@test.in") is not None
+    r = client.put("/api/details", json=DETAILS)
+    assert r.status_code == 403 and r.json()["code"] == "otp_required"
