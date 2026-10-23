@@ -214,7 +214,7 @@ nav.bottom button.on .dot{opacity:1}
 .pay-status.done{color:#4ade80}
 .badge-due{display:inline-block;background:rgba(245,158,11,.16);color:#fbbf24;border:1px solid rgba(245,158,11,.55);font-size:11px;font-weight:800;letter-spacing:.05em;padding:4px 10px;border-radius:99px;text-transform:uppercase}
 .badge-active{display:inline-block;background:rgba(52,211,153,.14);color:#6ee7b7;border:1px solid rgba(52,211,153,.45);font-size:11px;font-weight:800;letter-spacing:.05em;padding:4px 10px;border-radius:99px;text-transform:uppercase}
-</style>
+.pw-wrap{position:relative;display:block}.pw-wrap input{width:100%;padding-right:48px}.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:17px;line-height:1;padding:8px;opacity:.7;border-radius:8px}.pw-eye:hover{opacity:1}</style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute"><defs>
@@ -244,7 +244,7 @@ nav.bottom button.on .dot{opacity:1}
       </div>
       <div class="field">
         <label for="login-password">Password</label>
-        <input id="login-password" type="password" name="password" placeholder="Your password" autocomplete="current-password" maxlength="100" required>
+        <span class="pw-wrap"><input id="login-password" type="password" name="password" placeholder="Your password" autocomplete="current-password" maxlength="100" required><button type="button" class="pw-eye" data-pw="login-password" aria-label="Show password">👁</button></span>
       </div>
       <button class="btn btn-grad" type="submit" id="login-btn">Log In</button>
       <div class="hint-box" id="demo-hint"><strong>Demo login</strong> — Email: owner@powerhousegym.in<br>Password: Gym@2026</div>
@@ -283,7 +283,7 @@ nav.bottom button.on .dot{opacity:1}
         <input id="s-mobile" type="tel" placeholder="10-digit mobile number" autocomplete="tel" maxlength="15">
         <p class="field-err" id="err-s-mobile"></p></div>
       <div class="field"><label for="s-password">Password</label>
-        <input id="s-password" type="password" placeholder="At least 6 characters" autocomplete="new-password" maxlength="100">
+        <span class="pw-wrap"><input id="s-password" type="password" placeholder="At least 6 characters" autocomplete="new-password" maxlength="100"><button type="button" class="pw-eye" data-pw="s-password" aria-label="Show password">👁</button></span>
         <p class="field-err" id="err-s-password"></p></div>
       <button class="btn btn-grad" type="submit" id="signup-btn">Create Account →</button>
     </form>
@@ -1657,5 +1657,5 @@ async function initApp(){
   } catch (e) { showLogin(); }
 })();
 </script>
-</body>
+<script>document.addEventListener("click",function(e){var b=e.target.closest(".pw-eye");if(!b)return;var i=document.getElementById(b.getAttribute("data-pw"));if(!i)return;var show=i.type==="password";i.type=show?"text":"password";b.textContent=show?"\uD83D\uDE48":"\uD83D\uDC41";b.setAttribute("aria-label",show?"Hide password":"Show password");i.focus();});</script></body>
 </html>

@@ -2469,6 +2469,7 @@ def _control_login_html(error: str = "") -> str:
         f'<input type="hidden" name="csrf" value="{create_csrf_token()}">'
         '<label for="pw">Admin password</label>'
         '<input id="pw" type="password" name="password" autocomplete="current-password" required>'
+        '<button class="btn" type="button" style="margin:0 0 12px" onclick="var i=document.getElementById(\'pw\');var s=i.type===\'password\';i.type=s?\'text\':\'password\';this.textContent=s?\'Hide password\':\'Show password\'">Show password</button>'
         '<button class="btn btn-grad" type="submit">Open Control</button>'
         "</form></div></body></html>"
     )
