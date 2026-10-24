@@ -1,7 +1,7 @@
 """SQLAlchemy models for the PowerHouse Gym Owner App."""
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -102,9 +102,16 @@ class AdminAction(Base):
 
 class Member(Base):
     __tablename__ = "members"
+    # Tenant isolation (2026-10-24): every member belongs to exactly ONE
+    # gym owner. PHG codes are unique per owner, not globally — each gym
+    # runs its own PHG-001, PHG-002, ... sequence.
+    __table_args__ = (
+        UniqueConstraint("user_id", "code", name="uq_member_owner_code"),
+    )
 
     id = Column(Integer, primary_key=True)
-    code = Column(String(16), unique=True, nullable=False, index=True)  # e.g. PHG-001
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    code = Column(String(16), nullable=False, index=True)  # e.g. PHG-001
     name = Column(String(120), nullable=False)
     phone = Column(String(20), nullable=False)  # Indian mobile, digits only (10)
     plan = Column(String(20), nullable=False)  # Monthly | Quarterly | Yearly
@@ -144,6 +151,7 @@ class Renewal(Base):
     __tablename__ = "renewals"
 
     id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     member_id = Column(Integer, nullable=True)
     member_name = Column(String(120), nullable=False)
     plan = Column(String(20), nullable=False)

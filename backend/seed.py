@@ -115,21 +115,44 @@ def _phone(index: int) -> str:
 
 
 def seed_database(db: Session) -> None:
-    """(Re)create all demo data. Wipes business tables; keeps the owner user."""
-    for model in (models.CheckIn, models.AddonSub, models.Renewal,
-                  models.ManualFlag, models.ManualClear, models.Member,
-                  models.SubscriptionPayment):
-        db.query(model).delete()
-    db.query(models.Setting).delete()
-    db.commit()
-
-    # Demo owner account (flow already completed: details + plan chosen)
+    """(Re)create the DEMO gym's data. Tenant-scoped (2026-10-24):
+    wipes only the demo owner's members, check-ins, renewals, billing
+    rows and the settings the seed manages — every other gym's data
+    and keys are left exactly as they were."""
+    # Demo owner account (kept across resets; created first so the
+    # scoped wipe knows whose rows to remove).
     user = db.query(models.User).filter(models.User.email == DEMO_EMAIL).first()
     if not user:
         user = models.User(email=DEMO_EMAIL, password_hash=hash_password(DEMO_PASSWORD))
         db.add(user)
-    else:
-        user.password_hash = hash_password(DEMO_PASSWORD)
+        db.commit()
+        db.refresh(user)
+
+    demo_member_ids = [
+        mid for (mid,) in db.query(models.Member.id).filter(
+            (models.Member.user_id == user.id) | (models.Member.user_id.is_(None))
+        ).all()
+    ]
+    if demo_member_ids:
+        for model in (models.CheckIn, models.AddonSub, models.ManualFlag, models.ManualClear):
+            db.query(model).filter(model.member_id.in_(demo_member_ids)).delete(synchronize_session=False)
+        db.query(models.Renewal).filter(models.Renewal.member_id.in_(demo_member_ids)).delete(synchronize_session=False)
+        db.query(models.Member).filter(models.Member.id.in_(demo_member_ids)).delete(synchronize_session=False)
+    db.query(models.Renewal).filter(models.Renewal.user_id == user.id).delete(synchronize_session=False)
+    db.query(models.SubscriptionPayment).filter(
+        (models.SubscriptionPayment.user_id == user.id)
+        | (models.SubscriptionPayment.user_id.is_(None))
+    ).delete(synchronize_session=False)
+    managed_keys = [
+        "mode", "plan_id", "plan_period", "plan_status", "plan_since",
+        "payment_status", "payment_method", "payment_amount",
+        "checkin_token", "member_code_seq",
+        f"checkin_token:{user.id}", f"member_code_seq:{user.id}",
+    ]
+    db.query(models.Setting).filter(models.Setting.key.in_(managed_keys)).delete(synchronize_session=False)
+    db.commit()
+
+    user.password_hash = hash_password(DEMO_PASSWORD)
     for key, value in DEMO_DETAILS.items():
         setattr(user, key, value)
     user.details_completed = True
@@ -140,6 +163,7 @@ def seed_database(db: Session) -> None:
     members = []
     for i, (name, plan, expiry_off, visit_off) in enumerate(SEED_MEMBERS):
         m = models.Member(
+            user_id=user.id,
             code=f"PHG-{i + 1:03d}",
             name=name,
             phone=_phone(i),
@@ -181,10 +205,12 @@ def seed_database(db: Session) -> None:
 
     # Seed renewal history (both this month): ₹2,000 renewed this month.
     db.add(models.Renewal(
+        user_id=user.id,
         member_id=by_name["Rohan J."].id, member_name="Rohan J.", plan="Monthly",
         amount=1000, date=today - timedelta(days=4), new_expiry=today + timedelta(days=24),
     ))
     db.add(models.Renewal(
+        user_id=user.id,
         member_id=by_name["Kabir H."].id, member_name="Kabir H.", plan="Monthly",
         amount=1000, date=today - timedelta(days=9), new_expiry=today + timedelta(days=21),
     ))
@@ -212,10 +238,10 @@ def seed_database(db: Session) -> None:
         status="paid",
         created_at=datetime.now(),
     ))
-    # QR self check-in: a fresh per-gym token for the wall poster, and the
-    # member-code counter starting above the seeded PHG-001.. codes.
-    db.add(models.Setting(key="checkin_token", value=secrets.token_urlsafe(16)))
-    db.add(models.Setting(key="member_code_seq", value=str(len(SEED_MEMBERS))))
+    # QR self check-in: a fresh token for the DEMO gym's wall poster,
+    # and its member-code counter starting above the seeded codes.
+    db.add(models.Setting(key=f"checkin_token:{user.id}", value=secrets.token_urlsafe(16)))
+    db.add(models.Setting(key=f"member_code_seq:{user.id}", value=str(len(SEED_MEMBERS))))
     db.commit()
     meta = db.query(models.Meta).filter(models.Meta.key == "seeded").first()
     if not meta:

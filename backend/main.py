@@ -44,6 +44,7 @@ from google_auth import (
 )
 from member_codes import (
     checkin_token_matches,
+    checkin_token_owner,
     ensure_member_codes,
     get_or_create_checkin_token,
     next_member_code,
@@ -191,17 +192,39 @@ with engine.begin() as _conn:
         _conn.execute(sa_text(
             "ALTER TABLE users ADD COLUMN session_epoch INTEGER NOT NULL DEFAULT 0"
         ))
+# Tenant isolation upgrade (2026-10-24): members and renewals gain an
+# owning-gym column. Rows created before isolation belonged to the
+# single (demo) gym, so NULL owners are backfilled to the demo account
+# — or, failing that, the first account — and stay visible only there.
+_member_cols = [c["name"] for c in sa_inspect(engine).get_columns("members")]
+_renewal_cols = [c["name"] for c in sa_inspect(engine).get_columns("renewals")]
+with engine.begin() as _conn:
+    if "user_id" not in _member_cols:
+        _conn.execute(sa_text("ALTER TABLE members ADD COLUMN user_id INTEGER"))
+    if "user_id" not in _renewal_cols:
+        _conn.execute(sa_text("ALTER TABLE renewals ADD COLUMN user_id INTEGER"))
+    _conn.execute(sa_text(
+        "UPDATE members SET user_id = (SELECT id FROM users WHERE email = 'owner@powerhousegym.in') "
+        "WHERE user_id IS NULL AND EXISTS (SELECT 1 FROM users WHERE email = 'owner@powerhousegym.in')"
+    ))
+    _conn.execute(sa_text(
+        "UPDATE members SET user_id = (SELECT MIN(id) FROM users) "
+        "WHERE user_id IS NULL AND EXISTS (SELECT 1 FROM users)"
+    ))
+    _conn.execute(sa_text(
+        "UPDATE renewals SET user_id = (SELECT user_id FROM members WHERE members.id = renewals.member_id) "
+        "WHERE user_id IS NULL AND member_id IS NOT NULL"
+    ))
 SEED_ENABLED = os.environ.get("SEED_DEMO", "true").strip().lower() != "false"
 with SessionLocal() as _db:
     if SEED_ENABLED:
         seed_if_empty(_db)
-    # Every member must hold a PHG code, and the gym must hold a check-in
-    # token for its wall QR poster — backfill both on every boot (no-ops
-    # once present).
+    # Every member must hold a PHG code (in their own gym's sequence) —
+    # backfilled on every boot (no-op once present). Check-in tokens
+    # are per gym and are created lazily by each owner's link endpoint.
     _backfilled = ensure_member_codes(_db)
     if _backfilled:
         logger.info("Backfilled PHG member codes for %d member(s)", _backfilled)
-    get_or_create_checkin_token(_db)
 daily_backup()
 logger.info("PowerHouse Gym backend started (seed_demo=%s)", SEED_ENABLED)
 
@@ -682,11 +705,42 @@ def clear_ids(db: Session) -> set[int]:
     return {r.member_id for r in db.query(models.ManualClear).all()}
 
 
-def red_list(db: Session, today: date, min_days: int = 10) -> list[dict]:
+# ---------------------------------------------------------------------------
+# Tenant scoping (2026-10-24): a gym's members, check-ins and renewals are
+# private to that gym's owner. Every owner-facing query goes through these
+# helpers so no screen can ever show another gym's data.
+# ---------------------------------------------------------------------------
+def owner_members(db: Session, user_id: int):
+    """Query over ONLY this gym's members."""
+    return db.query(models.Member).filter(models.Member.user_id == user_id)
+
+
+def own_member(db: Session, user_id: int, member_id: int) -> models.Member | None:
+    """The member with this id IF it belongs to this gym, else None."""
+    return (
+        db.query(models.Member)
+        .filter(models.Member.id == member_id, models.Member.user_id == user_id)
+        .first()
+    )
+
+
+def own_member_by_code(db: Session, user_id: int, code: str) -> models.Member | None:
+    """The member with this PHG code INSIDE this gym, else None."""
+    return (
+        db.query(models.Member)
+        .filter(models.Member.user_id == user_id, models.Member.code == code)
+        .first()
+    )
+
+
+def red_list(db: Session, today: date, min_days: int = 10, user_id: int | None = None) -> list[dict]:
     """Computed no-show list: (10+ days absent OR manually flagged) minus manual clears."""
     flags, clears = flag_ids(db), clear_ids(db)
     rows = []
-    for m in db.query(models.Member).all():
+    q = db.query(models.Member)
+    if user_id is not None:
+        q = q.filter(models.Member.user_id == user_id)
+    for m in q.all():
         da = days_absent(db, m, today)
         is_flagged = m.id in flags
         if m.id in clears:
@@ -699,7 +753,13 @@ def red_list(db: Session, today: date, min_days: int = 10) -> list[dict]:
     return rows
 
 
-def get_mode(db: Session) -> str:
+def get_mode(db: Session, user_id: int | None = None) -> str:
+    """The owner's AUTO/MANUAL switch — per gym, falling back to the
+    legacy install-wide key for accounts that predate scoping."""
+    if user_id is not None:
+        row = db.query(models.Setting).filter(models.Setting.key == f"mode:{user_id}").first()
+        if row:
+            return row.value
     row = db.query(models.Setting).filter(models.Setting.key == "mode").first()
     return row.value if row else "auto"
 
@@ -861,7 +921,14 @@ def get_plan_state(db: Session, user_id: int | None = None) -> dict:
     plan_id = get_setting(db, "plan_id", "pro")
     plan = get_subscription_plan(plan_id) or get_subscription_plan("pro")
     period = get_setting(db, "plan_period", "monthly")
-    members_used = db.query(models.Member).count()
+    if user_id is not None:
+        members_used = (
+            db.query(models.Member)
+            .filter(models.Member.user_id == user_id)
+            .count()
+        )
+    else:
+        members_used = db.query(models.Member).count()
     recent_q = db.query(models.SubscriptionPayment)
     if user_id is not None:
         # Cross-account lock: an account sees ONLY its own payments
@@ -899,9 +966,12 @@ def get_plan_state(db: Session, user_id: int | None = None) -> dict:
     }
 
 
-def renewed_this_month(db: Session, today: date) -> int:
+def renewed_this_month(db: Session, today: date, user_id: int | None = None) -> int:
     total = 0
-    for r in db.query(models.Renewal).all():
+    q = db.query(models.Renewal)
+    if user_id is not None:
+        q = q.filter(models.Renewal.user_id == user_id)
+    for r in q.all():
         if r.date.year == today.year and r.date.month == today.month:
             total += r.amount
     return total
@@ -1625,18 +1695,22 @@ def stats(db: Session = Depends(get_db), user: models.User = Depends(current_use
     if isinstance(user, JSONResponse):
         return user
     today = date.today()
-    members = db.query(models.Member).all()
+    members = owner_members(db, user.id).all()
+    member_ids = {m.id for m in members}
     due = [m for m in members if 0 <= (m.expiry_date - today).days <= 7]
     expired = [m for m in members if (m.expiry_date - today).days < 0]
-    today_checkins = db.query(models.CheckIn).filter(models.CheckIn.date == today).all()
+    today_checkins = [
+        c for c in db.query(models.CheckIn).filter(models.CheckIn.date == today).all()
+        if c.member_id in member_ids
+    ]
     return {
         "total_members": len(members),
         "checked_in_today": len({c.member_id for c in today_checkins}),
-        "red_list_count": len(red_list(db, today)),
+        "red_list_count": len(red_list(db, today, user_id=user.id)),
         "renewals_due": len(due),
         "expired_count": len(expired),
-        "renewed_this_month": renewed_this_month(db, today),
-        "mode": get_mode(db),
+        "renewed_this_month": renewed_this_month(db, today, user_id=user.id),
+        "mode": get_mode(db, user_id=user.id),
     }
 
 
@@ -1645,7 +1719,7 @@ def members(db: Session = Depends(get_db), user: models.User = Depends(current_u
     if isinstance(user, JSONResponse):
         return user
     today = date.today()
-    return {"members": [member_dict(db, m, today) for m in db.query(models.Member).order_by(models.Member.id).all()]}
+    return {"members": [member_dict(db, m, today) for m in owner_members(db, user.id).order_by(models.Member.id).all()]}
 
 
 @app.get("/api/red-list")
@@ -1654,14 +1728,14 @@ def red_list_endpoint(min_days: int = 10, db: Session = Depends(get_db), user: m
         return user
     if min_days not in (10, 15, 20):
         return err(400, "min_days must be 10, 15 or 20.")
-    return {"members": red_list(db, date.today(), min_days=min_days), "min_days": min_days}
+    return {"members": red_list(db, date.today(), min_days=min_days, user_id=user.id), "min_days": min_days}
 
 
 @app.post("/api/red-list/flag")
 def flag_member(body: MemberRefIn, db: Session = Depends(get_db), user: models.User = Depends(current_user)):
     if isinstance(user, JSONResponse):
         return user
-    m = db.query(models.Member).filter(models.Member.id == body.member_id).first()
+    m = own_member(db, user.id, body.member_id)
     if not m:
         return err(404, "Member not found.")
     if not db.query(models.ManualFlag).filter(models.ManualFlag.member_id == m.id).first():
@@ -1677,6 +1751,9 @@ def flag_member(body: MemberRefIn, db: Session = Depends(get_db), user: models.U
 def unflag_member(member_id: int, db: Session = Depends(get_db), user: models.User = Depends(current_user)):
     if isinstance(user, JSONResponse):
         return user
+    m = db.query(models.Member).filter(models.Member.id == member_id).first()
+    if m is not None and m.user_id != user.id:
+        return err(404, "Member not found.")
     row = db.query(models.ManualFlag).filter(models.ManualFlag.member_id == member_id).first()
     if row:
         db.delete(row)
@@ -1688,7 +1765,7 @@ def unflag_member(member_id: int, db: Session = Depends(get_db), user: models.Us
 def clear_member(body: MemberRefIn, db: Session = Depends(get_db), user: models.User = Depends(current_user)):
     if isinstance(user, JSONResponse):
         return user
-    m = db.query(models.Member).filter(models.Member.id == body.member_id).first()
+    m = own_member(db, user.id, body.member_id)
     if not m:
         return err(404, "Member not found.")
     if not db.query(models.ManualClear).filter(models.ManualClear.member_id == m.id).first():
@@ -1706,9 +1783,9 @@ def checkin(body: CheckInIn, db: Session = Depends(get_db), user: models.User = 
         return user
     member = None
     if body.member_id is not None:
-        member = db.query(models.Member).filter(models.Member.id == body.member_id).first()
+        member = own_member(db, user.id, body.member_id)
     elif body.code:
-        member = db.query(models.Member).filter(models.Member.code == body.code.strip().upper()).first()
+        member = own_member_by_code(db, user.id, body.code.strip().upper())
     if not member:
         return err(404, "Member not found. Check the code and try again.")
     today = date.today()
@@ -1720,7 +1797,7 @@ def checkin(body: CheckInIn, db: Session = Depends(get_db), user: models.User = 
     return {
         "ok": True,
         "member": member_dict(db, member, today),
-        "red_list_count": len(red_list(db, today)),
+        "red_list_count": len(red_list(db, today, user_id=user.id)),
         "message": f"{member.name} checked in successfully.",
     }
 
@@ -1730,6 +1807,8 @@ def unmark_today(member_id: int, db: Session = Depends(get_db), user: models.Use
     """Manual-mode undo: remove today's check-in for a member."""
     if isinstance(user, JSONResponse):
         return user
+    if own_member(db, user.id, member_id) is None:
+        return {"ok": True}
     today = date.today()
     rows = db.query(models.CheckIn).filter(
         models.CheckIn.member_id == member_id, models.CheckIn.date == today
@@ -1745,9 +1824,12 @@ def checkins_today(db: Session = Depends(get_db), user: models.User = Depends(cu
     if isinstance(user, JSONResponse):
         return user
     today = date.today()
+    member_ids = {m.id for m in owner_members(db, user.id).all()}
     rows = db.query(models.CheckIn).filter(models.CheckIn.date == today).order_by(models.CheckIn.id.desc()).all()
     out = []
     for c in rows:
+        if c.member_id not in member_ids:
+            continue
         m = db.query(models.Member).filter(models.Member.id == c.member_id).first()
         if m:
             out.append({
@@ -1763,7 +1845,7 @@ def renewals(db: Session = Depends(get_db), user: models.User = Depends(current_
         return user
     today = date.today()
     due, expired = [], []
-    for m in db.query(models.Member).all():
+    for m in owner_members(db, user.id).all():
         d = member_dict(db, m, today)
         d["amount"] = PLANS[m.plan]["price"]
         if d["days_left"] < 0:
@@ -1777,7 +1859,7 @@ def renewals(db: Session = Depends(get_db), user: models.User = Depends(current_
             "member_name": r.member_name, "plan": r.plan, "amount": r.amount,
             "date": r.date.isoformat(), "new_expiry": r.new_expiry.isoformat(),
         }
-        for r in db.query(models.Renewal).order_by(models.Renewal.date.desc(), models.Renewal.id.desc()).all()
+        for r in db.query(models.Renewal).filter(models.Renewal.user_id == user.id).order_by(models.Renewal.date.desc(), models.Renewal.id.desc()).all()
     ]
     return {
         "due": due,
@@ -1786,7 +1868,7 @@ def renewals(db: Session = Depends(get_db), user: models.User = Depends(current_
         "stats": {
             "due_count": len(due),
             "expired_count": len(expired),
-            "renewed_this_month": renewed_this_month(db, today),
+            "renewed_this_month": renewed_this_month(db, today, user_id=user.id),
         },
     }
 
@@ -1795,7 +1877,7 @@ def renewals(db: Session = Depends(get_db), user: models.User = Depends(current_
 def renew(member_id: int, body: RenewIn | None = None, db: Session = Depends(get_db), user: models.User = Depends(current_user)):
     if isinstance(user, JSONResponse):
         return user
-    m = db.query(models.Member).filter(models.Member.id == member_id).first()
+    m = own_member(db, user.id, member_id)
     if not m:
         return err(404, "Member not found.")
     today = date.today()
@@ -1803,6 +1885,7 @@ def renew(member_id: int, body: RenewIn | None = None, db: Session = Depends(get
     m.expiry_date = today + timedelta(days=days)
     amount = PLANS[m.plan]["price"]
     db.add(models.Renewal(
+        user_id=user.id,
         member_id=m.id, member_name=m.name, plan=m.plan, amount=amount,
         date=today, new_expiry=m.expiry_date,
     ))
@@ -1822,7 +1905,7 @@ def search(q: str = "", db: Session = Depends(get_db), user: models.User = Depen
         return user
     today = date.today()
     needle = q.strip().lower()
-    members = db.query(models.Member).order_by(models.Member.id).all()
+    members = owner_members(db, user.id).order_by(models.Member.id).all()
     if needle:
         members = [
             m for m in members
@@ -1835,16 +1918,16 @@ def search(q: str = "", db: Session = Depends(get_db), user: models.User = Depen
 def get_mode_endpoint(db: Session = Depends(get_db), user: models.User = Depends(current_user)):
     if isinstance(user, JSONResponse):
         return user
-    return {"mode": get_mode(db)}
+    return {"mode": get_mode(db, user_id=user.id)}
 
 
 @app.put("/api/mode")
 def set_mode(body: ModeIn, db: Session = Depends(get_db), user: models.User = Depends(current_user)):
     if isinstance(user, JSONResponse):
         return user
-    row = db.query(models.Setting).filter(models.Setting.key == "mode").first()
+    row = db.query(models.Setting).filter(models.Setting.key == f"mode:{user.id}").first()
     if not row:
-        row = models.Setting(key="mode", value=body.mode)
+        row = models.Setting(key=f"mode:{user.id}", value=body.mode)
         db.add(row)
     else:
         row.value = body.mode
@@ -3573,7 +3656,8 @@ def create_member(body: MemberCreateIn, db: Session = Depends(get_db), user: mod
     if expiry is None:
         expiry = date.today() + timedelta(days=PLANS[plan]["days"])
     member = models.Member(
-        code=next_member_code(db), name=name, phone=phone, plan=plan,
+        user_id=user.id,
+        code=next_member_code(db, user.id), name=name, phone=phone, plan=plan,
         expiry_date=expiry,
     )
     db.add(member)
@@ -3595,9 +3679,13 @@ def create_member(body: MemberCreateIn, db: Session = Depends(get_db), user: mod
 # owner does nothing; the dashboard, Red List and today's list all read the
 # same checkins table, so they update by themselves.
 # ---------------------------------------------------------------------------
-def gym_display_name(db: Session) -> str:
-    """The gym's name for public pages: the first owner's gym name."""
-    owner = db.query(models.User).order_by(models.User.id).first()
+def gym_display_name(db: Session, user_id: int | None = None) -> str:
+    """A gym's name for public pages: THAT gym owner's gym name."""
+    owner = None
+    if user_id is not None:
+        owner = db.query(models.User).filter(models.User.id == user_id).first()
+    if owner is None:
+        owner = db.query(models.User).order_by(models.User.id).first()
     if owner and (owner.gym_name or "").strip():
         return owner.gym_name.strip()
     return "Do Gym"
@@ -3608,11 +3696,11 @@ def gym_checkin_link(db: Session = Depends(get_db), user: models.User = Depends(
     """Owner-only: this gym's public check-in URL (what the wall QR encodes)."""
     if isinstance(user, JSONResponse):
         return user
-    token = get_or_create_checkin_token(db)
+    token = get_or_create_checkin_token(db, user.id)
     return {
         "url": f"{app_base_url()}/checkin/{token}",
         "token": token,
-        "gym_name": gym_display_name(db),
+        "gym_name": gym_display_name(db, user.id),
     }
 
 
@@ -3621,12 +3709,12 @@ def gym_checkin_link_reset(db: Session = Depends(get_db), user: models.User = De
     """Owner-only: a fresh token — every previously printed poster dies."""
     if isinstance(user, JSONResponse):
         return user
-    token = reset_checkin_token(db)
+    token = reset_checkin_token(db, user.id)
     logger.info("Check-in link reset by %s (old QR posters retired)", user.email)
     return {
         "url": f"{app_base_url()}/checkin/{token}",
         "token": token,
-        "gym_name": gym_display_name(db),
+        "gym_name": gym_display_name(db, user.id),
     }
 
 
@@ -3637,13 +3725,14 @@ def member_checkin_page(token: str, db: Session = Depends(get_db)):
     Unknown token -> a friendly member-facing 404 in the app theme (never
     the owner app). Valid token -> the check-in page with this gym's name.
     """
-    if not checkin_token_matches(db, token):
+    owner_id = checkin_token_owner(db, token)
+    if owner_id is None:
         page = FRONTEND_DIR / "checkin-404.html"
         if page.exists():
             return FileResponse(page, status_code=404, media_type="text/html")
         return JSONResponse(status_code=404, content={"detail": "Not found."})
     html = (FRONTEND_DIR / "checkin.html").read_text(encoding="utf-8")
-    html = html.replace("__GYM_NAME__", html_escape(gym_display_name(db)))
+    html = html.replace("__GYM_NAME__", html_escape(gym_display_name(db, owner_id)))
     html = html.replace("__CHECKIN_TOKEN__", token)
     return HTMLResponse(content=html, status_code=200)
 
@@ -3661,15 +3750,14 @@ def scan_checkin(body: ScanIn, request: Request, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else "unknown"
     if scan_rate_limited(f"{ip}:{body.token}"):
         return err(429, "Too many attempts. Please wait a minute and try again.")
-    if not checkin_token_matches(db, body.token):
+    owner_id = checkin_token_owner(db, body.token)
+    if owner_id is None:
         return err(404, "This check-in link is not valid. Please ask at the front desk for the current poster.")
-    member = db.query(models.Member).filter(
-        models.Member.code == body.code.strip().upper()
-    ).first()
+    member = own_member_by_code(db, owner_id, body.code.strip().upper())
     if not member:
         return err(404, "We could not find that member code. Please check the code on your card and try again.")
     today = date.today()
-    gym = gym_display_name(db)
+    gym = gym_display_name(db, owner_id)
     existing = (
         db.query(models.CheckIn)
         .filter(models.CheckIn.member_id == member.id, models.CheckIn.date == today)

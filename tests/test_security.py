@@ -4,9 +4,9 @@ website full secure — no one should take the info or hack").
 Attack list:
   * Cross-account (IDOR): account B must never see account A's
     payments, pass A's OTP stage with B's code, or spend A's
-    face-unlock challenge. (Member register data is the gym's shared
-    team data by design — one install serves ONE gym; account-private
-    surfaces are what must never cross.)
+    face-unlock challenge. Since 2026-10-24 the member register is
+    also private per gym (see test_tenant_isolation.py): one install
+    serves many gyms, and no gym's data may ever cross into another's.
   * Headers & transport: full header set everywhere, HSTS only over
     HTTPS, Secure cookie flag under X-Forwarded-Proto: https.
   * Leaks: database / backup / log / .env files are not reachable

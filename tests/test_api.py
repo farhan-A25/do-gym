@@ -327,14 +327,16 @@ def test_full_signup_flow(client):
 
     # 4) Pay-first: the dashboard refuses until the subscription is
     # active. Farhan collects in person and activates from Control —
-    # then the stats load (the gym's shared register: 48 members).
+    # then the stats load. A brand-new gym starts with its OWN empty
+    # register (tenant isolation, 2026-10-24): the demo gym's 48
+    # members belong to the demo account alone.
     s = client.get("/api/stats")
     assert s.status_code == 402
     admin_activate(client, email=SIGNUP["email"],
                    plan_id="starter", period="yearly")
     s = client.get("/api/stats")
     assert s.status_code == 200
-    assert s.json()["total_members"] == 48
+    assert s.json()["total_members"] == 0
 
 
 def test_signup_duplicate_email_polite(client):

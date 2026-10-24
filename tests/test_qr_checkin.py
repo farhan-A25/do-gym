@@ -251,7 +251,10 @@ def test_create_member_validation(auth):
 
 def test_ensure_member_codes_backfills_missing(auth):
     with SessionLocal() as db:
+        demo = db.query(models.User).filter(
+            models.User.email == "owner@powerhousegym.in").first()
         db.add(models.Member(
+            user_id=demo.id,
             code="", name="No Code Member", phone="9876543217",
             plan="Monthly", expiry_date=date.today() + timedelta(days=30),
         ))
