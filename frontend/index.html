@@ -992,7 +992,8 @@ function reportCardHTML(){
 async function shareReport(){
   const r = DATA.report;
   if (!r) return;
-  if (!DATA.details) { const d = await api("/api/details"); DATA.details = d.ok ? d.data : {}; }
+  const fresh = await api("/api/details"); if (fresh.ok) DATA.details = fresh.data;
+  if (!DATA.details) DATA.details = {};
   const gym = r.gym_name || (ME && ME.gym_name) || "My Gym";
   const nm = a => a.length ? a.map(m => m.name).join(", ") : "None";
   const text = "🏋️ " + gym + " — Daily Report (" + fmtDate(r.date) + ")\n" +
@@ -1706,6 +1707,7 @@ $("#details-form").addEventListener("submit", async (ev) => {
     const r = await api("/api/details", { method: "PUT", body: JSON.stringify(body) });
     if (r.ok) {
       ME = Object.assign({}, ME, r.data);
+      DATA.details = Object.assign({}, DATA.details || {}, body);
       setGymName();
       toast("Your details are saved. Thank you!");
       if (DETAILS_EDIT) { showView("app"); await switchTab("plan"); }
