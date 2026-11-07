@@ -224,7 +224,7 @@ def seed_database(db: Session) -> None:
     db.add(models.Setting(key="plan_since", value=today.isoformat()))
     db.add(models.Setting(key="payment_status", value="active"))
     db.add(models.Setting(key="payment_method", value="upi_qr"))
-    db.add(models.Setting(key="payment_amount", value="1899"))
+    db.add(models.Setting(key="payment_amount", value="2549"))
     # The demo gym's subscription is backed by a real PAID payment record
     # (Premium monthly, billing.py price) — the pay-first gate reads the
     # latest payment row, so the demo owner is ACTIVE like any payer.
@@ -233,7 +233,7 @@ def seed_database(db: Session) -> None:
         plan_id="pro",
         plan_name="Premium",
         period="monthly",
-        amount=1899,
+        amount=2549,
         method="upi_qr",
         status="paid",
         created_at=datetime.now(),

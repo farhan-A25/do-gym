@@ -202,7 +202,7 @@ def test_successful_verify_records_face_unlock_and_lifts_gate(auth, client):
     assert body["subscription_active"] is True
     assert body["last_payment"]["method"] == "face_unlock"
     # The gym's chosen plan (seeded: Premium monthly, ₹1,899).
-    assert body["last_payment"]["amount"] == 1899
+    assert body["last_payment"]["amount"] == 2549
     assert auth.get("/api/stats").status_code == 200
 
     with SessionLocal() as db:

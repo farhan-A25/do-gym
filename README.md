@@ -8,7 +8,7 @@
 **https://powerhouse-gym-76jh.onrender.com** — the live site is **real accounts only** (no demo data; demo seeding is disabled in production since 2026-11-07). For a local demo, run it with `SEED_DEMO=true` and use `owner@powerhousegym.in` / `Gym@2026`.
 
 ### Business impact
-- **Replaces a manual workflow the market charges ₹10,000–15,000 per gym to automate** (registration sheets + spreadsheet expiry tracking + hand-sent reminders) with a self-serve product at **₹1,599/month**.
+- **Replaces a manual workflow the market charges ₹10,000–15,000 per gym to automate** (registration sheets + spreadsheet expiry tracking + hand-sent reminders) with a self-serve product at **₹2,249/month**.
 - **Retention, not just records:** the Red List surfaces members absent 10+ days *before* they churn, and renewals are flagged 7 days ahead — the two moments a gym actually loses money.
 - **Zero daily effort for the owner:** members check themselves in by scanning one wall QR; every count, list and report updates itself from the database.
 - **Multi-tenant by design:** every gym's data is fully isolated server-side (verified by a dedicated tenant-isolation test suite); one deployment serves every gym.
@@ -19,7 +19,7 @@
 - 💬 **WhatsApp renewal reminders** — one tap on any due/expired member opens a ready-to-send reminder to that member's own phone (no API cost)
 - 📷 **Fully automatic QR check-in** — member scans once, the phone remembers their code, later scans check in by themselves; same-day duplicates are idempotent
 - 🚨 **No-Show Red List** — silent quitters ranked by days absent, with one-tap calling
-- 🔐 **Pay-first platform model** — owners subscribe (Standard ₹1,599/mo · Premium ₹1,899/mo); the app unlocks only after verified in-person collection + face scan, controlled from a hidden admin panel
+- 🔐 **Pay-first platform model** — owners subscribe (Standard ₹2,249/mo · Premium ₹2,549/mo); the app unlocks only after verified in-person collection + face scan, controlled from a hidden admin panel
 - ✅ **170+ automated tests** covering API, auth, payment gate, tenant isolation, face unlock, OTP and security headers
 
 ### Tech stack
@@ -84,8 +84,8 @@ Plans are defined once in the backend (`backend/billing.py`) and served via `GET
 
 | Plan | Monthly | Yearly (2 months free) | Includes |
 |---|---|---|---|
-| **Standard** | ₹1,599/mo | ₹15,990/yr | Up to 69 members, Red List, QR Check-In, Renewals, search everywhere, AUTO mode, 1 owner login |
-| **Premium** ⭐ Most Popular | ₹1,899/mo | ₹18,990/yr | Unlimited members, everything in Standard, AUTO + MANUAL modes, renewal history & reports, priority support |
+| **Standard** | ₹2,249/mo | ₹22,490/yr | Up to 69 members, Red List, QR Check-In, Renewals, search everywhere, AUTO mode, 1 owner login |
+| **Premium** ⭐ Most Popular | ₹2,549/mo | ₹25,490/yr | Unlimited members, everything in Standard, AUTO + MANUAL modes, renewal history & reports, priority support |
 
 *Prices in INR. GST extra as applicable. Cancel anytime.*
 Market basis: Indian gym software competitors run ₹399–₹1,999/month (GymMunshi, Fitzenix, GymExec, FitnessDesk), and yearly billing across the market works out to about 2 months free.
@@ -161,7 +161,7 @@ Built, tested, and **off** until configured. It is NOT the launch model (the pan
 2. In the Razorpay dashboard → **Settings → API Keys**, generate the live **Key ID + Key Secret**.
 3. In **Settings → Webhooks**, add a webhook: URL `https://YOUR-APP-ADDRESS/api/webhooks/razorpay`, subscribe to events **`payment.captured`** and **`order.paid`**, and copy its **webhook secret**.
 4. Set the three environment variables — `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` — and restart. Automatic unlock is live.
-5. Know the cost plainly: **Razorpay charges about 2% per payment** — on a ₹1,599 Standard month that is roughly ₹32 kept by Razorpay.
+5. Know the cost plainly: **Razorpay charges about 2% per payment** — on a ₹2,249 Standard month that is roughly ₹45 kept by Razorpay.
 
 ---
 

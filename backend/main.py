@@ -2310,7 +2310,7 @@ def _secret_matches(candidate) -> bool:
 
 
 def _inr(n) -> str:
-    """₹ amount with Indian digit grouping (e.g. 1899 → '1,899',
+    """₹ amount with Indian digit grouping (e.g. 2549 → '2,549',
     100000 → '1,00,000') for the control page."""
     s = str(int(n or 0))
     if len(s) <= 3:

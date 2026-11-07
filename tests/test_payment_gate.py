@@ -66,7 +66,7 @@ def _make_legacy_pending():
                 .filter(models.User.email == DEMO["email"]).first())
         db.add(models.SubscriptionPayment(
             user_id=user.id, plan_id="starter", plan_name="Standard",
-            period="monthly", amount=1599, method="upi_qr",
+            period="monthly", amount=2249, method="upi_qr",
             status="pending", created_at=datetime.now(),
         ))
         db.commit()
@@ -163,7 +163,7 @@ def test_admin_activation_lifts_the_gate_immediately(auth):
     assert state["payment_status"] == "active"
     assert state["subscription_active"] is True
     # Standard monthly at the owner's 2026-10-23 price, computed server-side.
-    assert state["last_payment"]["amount"] == 1599
+    assert state["last_payment"]["amount"] == 2249
     assert state["last_payment"]["status"] == "paid"
     assert state["last_payment"]["method"] == "collected_in_person"
 
@@ -182,7 +182,7 @@ def test_admin_activation_lifts_the_gate_immediately(auth):
 def test_standard_yearly_payment_records_new_price(auth):
     admin_activate(auth, plan_id="starter", period="yearly")
     state = auth.get("/api/plan").json()
-    assert state["last_payment"]["amount"] == 15990
+    assert state["last_payment"]["amount"] == 22490
     assert state["last_payment"]["method"] == "collected_in_person"
 
 
@@ -219,7 +219,7 @@ def test_demo_account_is_active_from_its_seeded_payment(auth):
     # Seeded as a real paid record (Premium monthly, billing.py price).
     lp = plan["last_payment"]
     assert lp["status"] == "paid"
-    assert lp["amount"] == 1899
+    assert lp["amount"] == 2549
     assert lp["plan_name"] == "Premium"
     # Nothing in the app is gated for the demo owner.
     for path in GATED_GETS:

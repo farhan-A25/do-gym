@@ -7,14 +7,18 @@ Prices (INR) are set from live market research of Indian gym software —
 competitors run ₹399–₹1,999/month (GymMunshi ₹399/₹799/₹1,299, Fitzenix
 ₹499/₹999/₹1,999, GymExec ₹499/₹999/₹2,499, FitnessDesk ₹999/₹2,499/₹4,999);
 yearly billing across the market is roughly 2 months free.
+
+2026-11-07 (Farhan's decision): the platform's hosting cost (~₹650/month)
+is built into every plan — each monthly price rose by ₹650
+(Standard ₹1,599 → ₹2,249, Premium ₹1,899 → ₹2,549; yearly = 10× monthly).
 """
 
 SUBSCRIPTION_PLANS = [
     {
         "id": "starter",
         "name": "Standard",
-        "monthly": 1599,
-        "yearly": 15990,
+        "monthly": 2249,
+        "yearly": 22490,
         "member_limit": 69,
         "badge": None,
         "features": [
@@ -30,8 +34,8 @@ SUBSCRIPTION_PLANS = [
     {
         "id": "pro",
         "name": "Premium",
-        "monthly": 1899,
-        "yearly": 18990,
+        "monthly": 2549,
+        "yearly": 25490,
         "member_limit": None,  # unlimited
         "badge": "Most Popular",
         "features": [

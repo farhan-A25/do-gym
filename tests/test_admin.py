@@ -278,7 +278,7 @@ def test_admin_api_activation_lifts_gate_end_to_end(auth, client, admin_on):
     plan = auth.get("/api/plan").json()
     assert plan["subscription_active"] is True
     assert plan["last_payment"]["method"] == "collected_in_person"
-    assert plan["last_payment"]["amount"] == 1599  # Standard monthly, server-side
+    assert plan["last_payment"]["amount"] == 2249  # Standard monthly, server-side
 
     # Activating again inside the live window records NOTHING twice.
     r = client.post("/api/admin/activate", headers=HEADERS,

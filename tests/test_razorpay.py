@@ -172,11 +172,11 @@ def test_order_creation_uses_server_amount_and_stores_owner(auth, gateway_on):
     assert data["order_id"].startswith("order_TEST")
     assert data["key_id"] == KEY_ID
     # Standard monthly at the owner's price — computed server-side.
-    assert data["amount"] == 1599
-    assert data["amount_paise"] == 159900
+    assert data["amount"] == 2249
+    assert data["amount_paise"] == 224900
     # Razorpay was asked for exactly that, in paise, with the owner in notes.
     (call,) = gateway_on
-    assert call["amount_paise"] == 159900
+    assert call["amount_paise"] == 224900
     assert call["notes"]["user_id"] == str(_demo_user_id())
     assert call["notes"]["plan_id"] == "starter"
     # And the order is on file for the webhook to match against.
@@ -185,7 +185,7 @@ def test_order_creation_uses_server_amount_and_stores_owner(auth, gateway_on):
             models.GatewayOrder.order_id == data["order_id"]).first()
         assert row is not None
         assert row.user_id == _demo_user_id()
-        assert row.amount == 1599
+        assert row.amount == 2249
         assert row.status == "created"
 
 
@@ -205,7 +205,7 @@ def test_valid_webhook_records_payment_and_lifts_gate(auth, client, gateway_on):
     _make_unpaid()
     assert auth.get("/api/stats").status_code == 402  # gate shut
 
-    payload = _captured_payload(order["order_id"], "pay_TEST1", 159900,
+    payload = _captured_payload(order["order_id"], "pay_TEST1", 224900,
                                 _demo_user_id())
     r = _post_webhook(client, payload)
     assert r.status_code == 200, r.text
@@ -218,7 +218,7 @@ def test_valid_webhook_records_payment_and_lifts_gate(auth, client, gateway_on):
     lp = plan["last_payment"]
     assert lp["status"] == "paid"
     assert lp["method"] == "razorpay"
-    assert lp["amount"] == 1599
+    assert lp["amount"] == 2249
     with SessionLocal() as db:
         row = db.query(models.SubscriptionPayment).filter(
             models.SubscriptionPayment.gateway_payment_id == "pay_TEST1").first()
@@ -238,7 +238,7 @@ def test_order_paid_event_also_records(auth, client, gateway_on):
                                  "notes": {"user_id": str(_demo_user_id())}}},
             "payment": {"entity": {"id": "pay_TEST9",
                                    "order_id": order["order_id"],
-                                   "amount": 1899000}},
+                                   "amount": 2549000}},
         },
     }
     r = _post_webhook(client, payload)
@@ -246,14 +246,14 @@ def test_order_paid_event_also_records(auth, client, gateway_on):
     assert r.json()["status"] == "recorded"
     assert auth.get("/api/stats").status_code == 200
     plan = auth.get("/api/plan").json()
-    assert plan["last_payment"]["amount"] == 18990  # Premium yearly
+    assert plan["last_payment"]["amount"] == 25490  # Premium yearly
     assert plan["last_payment"]["method"] == "razorpay"
 
 
 def test_bad_signature_records_nothing(auth, client, gateway_on):
     order = _create_order(auth, "starter", "monthly")
     _make_unpaid()
-    payload = _captured_payload(order["order_id"], "pay_EVIL", 159900,
+    payload = _captured_payload(order["order_id"], "pay_EVIL", 224900,
                                 _demo_user_id())
     r = _post_webhook(client, payload, secret="the-wrong-secret")
     assert r.status_code == 400
@@ -265,7 +265,7 @@ def test_bad_signature_records_nothing(auth, client, gateway_on):
 def test_duplicate_webhook_records_exactly_once(auth, client, gateway_on):
     order = _create_order(auth, "starter", "monthly")
     _make_unpaid()
-    payload = _captured_payload(order["order_id"], "pay_DUP1", 159900,
+    payload = _captured_payload(order["order_id"], "pay_DUP1", 224900,
                                 _demo_user_id())
     r1 = _post_webhook(client, payload)
     assert r1.status_code == 200 and r1.json()["status"] == "recorded"
@@ -280,7 +280,7 @@ def test_duplicate_webhook_records_exactly_once(auth, client, gateway_on):
 
 def test_webhook_for_unknown_order_is_ignored(auth, client, gateway_on):
     _make_unpaid()
-    payload = _captured_payload("order_NOTOURS", "pay_GHOST", 159900,
+    payload = _captured_payload("order_NOTOURS", "pay_GHOST", 224900,
                                 _demo_user_id())
     r = _post_webhook(client, payload)
     assert r.status_code == 200
@@ -291,7 +291,7 @@ def test_webhook_for_unknown_order_is_ignored(auth, client, gateway_on):
 
 
 def test_webhook_amount_mismatch_is_ignored(auth, client, gateway_on):
-    order = _create_order(auth, "starter", "monthly")  # ₹1,599 = 159900 paise
+    order = _create_order(auth, "starter", "monthly")  # ₹1,599 = 224900 paise
     _make_unpaid()
     payload = _captured_payload(order["order_id"], "pay_SHORT", 100,
                                 _demo_user_id())

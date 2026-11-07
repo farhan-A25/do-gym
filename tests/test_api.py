@@ -224,9 +224,9 @@ def test_plans_endpoint_exact_two_plans(client):
     plans = r.json()["plans"]
     assert len(plans) == 2
     starter, pro = plans[0], plans[1]
-    assert starter["id"] == "starter" and starter["monthly"] == 1599 and starter["yearly"] == 15990
+    assert starter["id"] == "starter" and starter["monthly"] == 2249 and starter["yearly"] == 22490
     assert starter["member_limit"] == 69
-    assert pro["id"] == "pro" and pro["monthly"] == 1899 and pro["yearly"] == 18990
+    assert pro["id"] == "pro" and pro["monthly"] == 2549 and pro["yearly"] == 25490
     assert pro["member_limit"] is None
     assert pro["badge"] == "Most Popular"
 

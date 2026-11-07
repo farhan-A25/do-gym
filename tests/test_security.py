@@ -58,7 +58,7 @@ def test_account_b_never_sees_account_a_payments():
     # Farhan collects from A in person and activates A.
     admin_activate(a, email=A_EMAIL, plan_id="pro", period="monthly")
     plan_a = a.get("/api/plan").json()
-    assert plan_a["last_payment"]["amount"] == 1899
+    assert plan_a["last_payment"]["amount"] == 2549
     assert plan_a["subscription_active"] is True
 
     b = _make_account(_fresh_client(), B_EMAIL)
