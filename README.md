@@ -3,7 +3,7 @@
 **A deployed, multi-tenant SaaS web app that stops gym members from silently quitting.** Gym owners get automatic QR check-ins, a No-Show Red List of members who stopped coming, one-tap WhatsApp renewal reminders, and a daily business report — with zero register books and zero manual tracking.
 
 ### 🔗 Live product
-**https://powerhouse-gym-76jh.onrender.com** — try it with the public demo account (shown on the login page): `owner@powerhousegym.in` / `Gym@2026`
+**https://powerhouse-gym-76jh.onrender.com** — the live site is **real accounts only** (no demo data; demo seeding is disabled in production since 2026-11-07). For a local demo, run it with `SEED_DEMO=true` and use `owner@powerhousegym.in` / `Gym@2026`.
 
 ### Business impact
 - **Replaces a manual workflow the market charges ₹10,000–15,000 per gym to automate** (registration sheets + spreadsheet expiry tracking + hand-sent reminders) with a self-serve product at **₹1,599/month**.
@@ -266,7 +266,7 @@ The full plain-language summary for Farhan lives in **[SECURITY.md](SECURITY.md)
 
 1. **Push this project to GitHub** (the whole `gym-app` folder as one repository).
 2. **Create a free account on Render** (render.com) and choose **New → Blueprint**; select your GitHub repository. Render reads `render.yaml` automatically (a `Procfile` is included as a backup for other hosts).
-3. **Set the environment variables** when Render asks: it generates a `SECRET_KEY` for you; `SHOW_DEMO_HINT` is already set to `false` and `SEED_DEMO` to `true` in `render.yaml` — keep them that way for the public demo.
+3. **Set the environment variables** when Render asks: it generates a `SECRET_KEY` for you; `SHOW_DEMO_HINT` and `SEED_DEMO` are both `false` in `render.yaml` — keep them that way on the public site so it only ever shows real data.
 4. **Wait for the build to finish** and open the live URL Render gives you (like `https://your-app.onrender.com`). Log in with the demo account to check everything works.
 5. **Change the demo password before real use** — the seeded demo account (`owner@powerhousegym.in` / `Gym@2026`) is public knowledge from this README. Before handling real member data, set `SEED_DEMO=false`, remove the demo account from the database, and create your own account via the Sign Up page.
 6. **Know the free-plan limit:** Render's free plan has an **ephemeral disk** — the SQLite database resets when the service redeploys or restarts. For a real gym, upgrade to a paid Render plan with a **persistent disk** (or move `DATABASE_URL` to a hosted Postgres) so member data is never lost.
