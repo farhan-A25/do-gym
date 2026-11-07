@@ -1,6 +1,6 @@
 # Verification record — roles, stated plainly
 
-**Do Gym is designed and built by Mohammed Farhan** (founder and owner).
+**Do Gym is designed and built by Mohammed Abdul Farhan** (founder and owner).
 He is the maker of this project; every commit in this repository is his.
 
 The documents in this folder record **independent testing and verification

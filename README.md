@@ -2,7 +2,7 @@
 
 **A deployed, multi-tenant SaaS web app that stops gym members from silently quitting.** Gym owners get automatic QR check-ins, a No-Show Red List of members who stopped coming, one-tap WhatsApp renewal reminders, and a daily business report — with zero register books and zero manual tracking.
 
-**Designed and built by Mohammed Farhan** — founder and owner of Do Gym. (Independent testing & verification record: [docs/verification/](docs/verification/).)
+**Designed and built by Mohammed Abdul Farhan** — founder and owner of Do Gym. (Independent testing & verification record: [docs/verification/](docs/verification/).)
 
 ### 🔗 Live product
 **https://powerhouse-gym-76jh.onrender.com** — the live site is **real accounts only** (no demo data; demo seeding is disabled in production since 2026-11-07). For a local demo, run it with `SEED_DEMO=true` and use `owner@powerhousegym.in` / `Gym@2026`.
