@@ -62,6 +62,16 @@ h2{font-size:20px;font-weight:800;letter-spacing:-.01em}
 .btn-deep{background:var(--grad-deep);color:#fff;box-shadow:var(--glow-deep)}
 .btn-ghost{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text)}
 .btn-sm{padding:9px 14px;font-size:13.5px;min-height:42px;border-radius:10px}
+.btn-wa{background:#25d366;color:#052e12;font-weight:700}
+.btn-wa:hover{background:#1fb857}
+.chip-wa{display:inline-block;background:#25d366;color:#052e12;font-weight:700;font-size:12px;padding:5px 11px;border-radius:999px;text-decoration:none;margin-left:6px;white-space:nowrap}
+.report-card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--border);border-radius:var(--radius);padding:16px 14px;margin:18px 0 4px;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.report-item{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:10px 12px}
+.report-num{display:block;font-size:20px;font-weight:800}
+.report-lbl{font-size:12px;opacity:.75}
+.report-sub{margin-top:13px;font-weight:700;font-size:13.5px}
+.report-member{padding:7px 2px;border-bottom:1px dashed var(--border);font-size:14px}
 .btn-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:#fff;color:#1f1f1f;border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:13px 18px;font-size:15px;font-weight:600;min-height:48px;text-decoration:none;transition:transform .15s, box-shadow .2s}
 .btn-google:hover{box-shadow:0 6px 18px rgba(255,255,255,.14)}
 .btn-google:active{transform:scale(.98)}
@@ -228,7 +238,7 @@ nav.bottom button.on .dot{opacity:1}
   <div id="login-view">
     <div class="logo-mark"><img src="/icon-512.png" alt="Do Gym"></div>
     <h1>Do <span class="grad-text">Gym</span></h1>
-    <p class="sub" style="margin-top:7px">Owner App — your members, renewals and daily check-ins, all in one place.</p>
+    <p class="sub" style="margin-top:7px">Owner App — members, automatic QR check-ins, WhatsApp renewal reminders and a daily report. Zero register books.</p>
 
     <form class="login-card" id="login-form" autocomplete="on">
       <h2 style="margin-bottom:16px">Owner Login</h2>
@@ -471,7 +481,7 @@ let MODE = "auto";
 let TAB = "home";
 const SEARCH = { home:"", red:"", checkin:"", renewal:"", plan:"" };
 let RED_FILTER = 10;
-const DATA = { members: [], stats: null, red: [], renewals: null, today: [] };
+const DATA = { members: [], stats: null, red: [], renewals: null, today: [], report: null, details: null };
 
 /* ---------------- API layer ---------------- */
 async function api(path, opts = {}){
@@ -893,11 +903,12 @@ async function doCheckIn(memberId, after){
 /* ================= HOME ================= */
 async function renderHome(){
   const el = $("#screen-home");
-  const [stats, today, members] = await Promise.all([
-    api("/api/stats"), api("/api/checkins/today"), api("/api/members"),
+  const [stats, today, members, report] = await Promise.all([
+    api("/api/stats"), api("/api/checkins/today"), api("/api/members"), api("/api/daily-report"),
   ]);
   if (!stats.ok) return;
   DATA.stats = stats.data; DATA.today = today.data.checkins || []; DATA.members = members.data.members || [];
+  DATA.report = report.ok ? report.data : null;
   MODE = DATA.stats.mode || MODE;
   el.innerHTML =
     "<h1>Hi, Sir</h1>" +
@@ -912,6 +923,7 @@ async function renderHome(){
       statCard('<span class="num-red">' + DATA.stats.red_list_count + "</span>", "No-Show Red List") +
       statCard(DATA.stats.renewals_due, "Renewals Due (7 days)") +
     "</div>" +
+    '<div id="home-report">' + reportCardHTML() + "</div>" +
     '<div class="shortcut-grid">' +
       '<button class="shortcut sc-blue" data-go="red"><span class="sc-k">SCREEN 1</span><span class="sc-t">NO-SHOW</span></button>' +
       '<button class="shortcut sc-deep" data-go="checkin"><span class="sc-k">SCREEN 2</span><span class="sc-t">QR CHECK-IN</span></button>' +
@@ -945,7 +957,57 @@ async function renderHome(){
   inp.addEventListener("input", () => { SEARCH.home = inp.value; paintQuickFind(); refreshClearBtn("home", paintQuickFind); });
   const clr = $("#clear-home");
   if (clr) clr.addEventListener("click", () => { SEARCH.home = ""; renderHome(); });
+  const shb = $("#report-share");
+  if (shb) shb.addEventListener("click", shareReport);
   paintQuickFind();
+}
+function waRemindLink(m, expiredList){
+  const gym = (ME && ME.gym_name) || "our gym";
+  const msg = expiredList
+    ? "Hi " + m.name + " 👋, this is " + gym + ". Your " + m.plan + " membership expired on " + fmtDate(m.expiry_date) + ". Renew today and get back to your fitness journey — we miss you at the gym!"
+    : "Hi " + m.name + " 👋, this is " + gym + ". Your " + m.plan + " membership expires on " + fmtDate(m.expiry_date) + (m.days_left === 0 ? " (today!)" : " (in " + m.days_left + " day" + (m.days_left === 1 ? "" : "s") + ")") + ". Please renew on time so your workouts don't stop. Thank you!";
+  return "https://wa.me/91" + m.phone + "?text=" + encodeURIComponent(msg);
+}
+function reportCardHTML(){
+  const r = DATA.report;
+  if (!r) return "";
+  const line = m =>
+    '<div class="report-member">' + esc(m.name) +
+    ' <span class="small">· ' + esc(m.plan) + " · " + esc(fmtDate(m.expiry_date)) + "</span>" +
+    (m.phone ? '<a class="chip-wa" target="_blank" rel="noopener" href="' + waRemindLink(m, m.days_left < 0) + '">💬 Remind</a>' : "") +
+    "</div>";
+  return '<div class="report-card">' +
+    '<div class="section-head" style="margin-top:0"><h2>📋 Today\'s Report</h2><span class="small">' + esc(fmtDate(r.date)) + "</span></div>" +
+    '<div class="report-grid">' +
+      '<div class="report-item"><span class="report-num">' + r.checked_in_today + '</span><span class="report-lbl">Checked in today</span></div>' +
+      '<div class="report-item"><span class="report-num">' + inr(r.payments_today_total) + '</span><span class="report-lbl">Collected today (' + r.payments_today_count + " payment" + (r.payments_today_count === 1 ? "" : "s") + ")</span></div>" +
+      '<div class="report-item"><span class="report-num">' + r.new_members_today + '</span><span class="report-lbl">New members today</span></div>' +
+      '<div class="report-item"><span class="report-num">' + r.renewals_due_7d + '</span><span class="report-lbl">Renewals due (7 days)</span></div>' +
+    "</div>" +
+    (r.expiring_today.length ? '<div class="report-sub">⏰ Expiring today</div>' + r.expiring_today.map(line).join("") : "") +
+    (r.expiring_3_days.length ? '<div class="report-sub">📅 Expiring in the next 3 days</div>' + r.expiring_3_days.map(line).join("") : "") +
+    '<button class="btn btn-wa" id="report-share" type="button" style="width:100%;margin-top:13px">💬 Share Report on WhatsApp</button>' +
+    "</div>";
+}
+async function shareReport(){
+  const r = DATA.report;
+  if (!r) return;
+  if (!DATA.details) { const d = await api("/api/details"); DATA.details = d.ok ? d.data : {}; }
+  const gym = r.gym_name || (ME && ME.gym_name) || "My Gym";
+  const nm = a => a.length ? a.map(m => m.name).join(", ") : "None";
+  const text = "🏋️ " + gym + " — Daily Report (" + fmtDate(r.date) + ")\n" +
+    "✅ Checked in today: " + r.checked_in_today + "\n" +
+    "💰 Collected today: " + inr(r.payments_today_total) + " (" + r.payments_today_count + " payments)\n" +
+    "🆕 New members today: " + r.new_members_today + "\n" +
+    "⏰ Expiring today: " + nm(r.expiring_today) + "\n" +
+    "📅 Expiring in 3 days: " + r.expiring_3_days.length + " member" + (r.expiring_3_days.length === 1 ? "" : "s") + "\n" +
+    "❌ Expired: " + r.expired_count + " · 🔴 No-Show Red List: " + r.red_list_count + "\n" +
+    "👥 Total members: " + r.total_members + "\n— via Do Gym";
+  const num = (DATA.details && DATA.details.whatsapp) || "";
+  const url = num
+    ? "https://wa.me/91" + num + "?text=" + encodeURIComponent(text)
+    : "https://api.whatsapp.com/send?text=" + encodeURIComponent(text);
+  window.open(url, "_blank");
 }
 function statCard(num, lbl){
   return '<div class="stat-card"><div class="num">' + num + '</div><div class="lbl">' + esc(lbl) + "</div></div>";
@@ -1248,7 +1310,9 @@ function renewalRow(m, expiredList){
     '<div class="row-main"><div class="row-name">' + esc(m.name) + '</div>' +
     '<div class="row-sub">' + esc(m.plan) + " · Expires " + esc(fmtDate(m.expiry_date)) + " · " + inr(m.amount) + " · " + esc(m.code) + "</div></div>" +
     '<div style="text-align:right"><div>' + daysText + '</div>' +
-    '<button class="btn btn-grad btn-sm" data-renew="' + m.id + '" type="button" style="margin-top:7px">Renew</button></div>' +
+    '<button class="btn btn-grad btn-sm" data-renew="' + m.id + '" type="button" style="margin-top:7px">Renew</button>' +
+    (m.phone ? '<a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="' + waRemindLink(m, expiredList) + '" style="margin-top:7px;margin-left:7px;text-decoration:none;width:auto;display:inline-block">💬 Remind</a>' : "") +
+    '</div>' +
     (MODE === "manual"
       ? '<div style="flex-basis:100%;display:flex;gap:9px;margin-top:11px"><input class="inp" type="number" min="1" max="3650" id="cd-' + m.id + '" placeholder="Custom days (e.g. 45)" style="flex:1;min-height:44px">' +
         '<button class="btn btn-ghost btn-sm" data-extend="' + m.id + '" type="button">Mark Paid / Extend</button></div>'

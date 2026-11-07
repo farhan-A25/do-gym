@@ -215,6 +215,11 @@ with engine.begin() as _conn:
         "UPDATE renewals SET user_id = (SELECT user_id FROM members WHERE members.id = renewals.member_id) "
         "WHERE user_id IS NULL AND member_id IS NOT NULL"
     ))
+# Joined-date upgrade: members gain the day they joined so the Daily
+# Report can count new members. Older rows stay NULL (join day unknown).
+if "joined_date" not in _member_cols:
+    with engine.begin() as _conn:
+        _conn.execute(sa_text("ALTER TABLE members ADD COLUMN joined_date DATE"))
 SEED_ENABLED = os.environ.get("SEED_DEMO", "true").strip().lower() != "false"
 with SessionLocal() as _db:
     if SEED_ENABLED:
@@ -690,6 +695,7 @@ def member_dict(db: Session, m: models.Member, today: date) -> dict:
         "phone": m.phone,
         "plan": m.plan,
         "expiry_date": m.expiry_date.isoformat(),
+        "joined_date": m.joined_date.isoformat() if getattr(m, "joined_date", None) else None,
         "days_left": (m.expiry_date - today).days,
         "last_visit": lv.isoformat() if lv else None,
         "days_absent": days_absent(db, m, today),
@@ -1711,6 +1717,58 @@ def stats(db: Session = Depends(get_db), user: models.User = Depends(current_use
         "expired_count": len(expired),
         "renewed_this_month": renewed_this_month(db, today, user_id=user.id),
         "mode": get_mode(db, user_id=user.id),
+    }
+
+
+@app.get("/api/daily-report")
+def daily_report(db: Session = Depends(get_db), user: models.User = Depends(current_user)):
+    """One-screen morning report for the owner (like the video's 8 AM
+    summary, but live): who came today, what money came in, who joined,
+    and whose membership needs attention — with phone numbers so the
+    owner can remind members on WhatsApp in one tap."""
+    if isinstance(user, JSONResponse):
+        return user
+    today = date.today()
+    members = owner_members(db, user.id).all()
+    member_ids = {m.id for m in members}
+    by_id = {m.id: m for m in members}
+    todays = [
+        c for c in db.query(models.CheckIn).filter(models.CheckIn.date == today).all()
+        if c.member_id in member_ids
+    ]
+    checked_names = sorted({by_id[c.member_id].name for c in todays if c.member_id in by_id})
+    payments = db.query(models.Renewal).filter(
+        models.Renewal.user_id == user.id, models.Renewal.date == today
+    ).all()
+
+    def brief(m: models.Member) -> dict:
+        return {
+            "name": m.name, "code": m.code, "phone": m.phone, "plan": m.plan,
+            "expiry_date": m.expiry_date.isoformat(),
+            "days_left": (m.expiry_date - today).days,
+        }
+
+    expired = [m for m in members if (m.expiry_date - today).days < 0]
+    return {
+        "date": today.isoformat(),
+        "gym_name": gym_display_name(db, user.id),
+        "total_members": len(members),
+        "active_members": len(members) - len(expired),
+        "checked_in_today": len({c.member_id for c in todays}),
+        "checked_in_names": checked_names,
+        "payments_today_count": len(payments),
+        "payments_today_total": sum(r.amount for r in payments),
+        "new_members_today": sum(
+            1 for m in members if getattr(m, "joined_date", None) == today
+        ),
+        "expiring_today": [brief(m) for m in members if (m.expiry_date - today).days == 0],
+        "expiring_3_days": sorted(
+            (brief(m) for m in members if 1 <= (m.expiry_date - today).days <= 3),
+            key=lambda r: r["days_left"],
+        ),
+        "expired_count": len(expired),
+        "renewals_due_7d": sum(1 for m in members if 0 <= (m.expiry_date - today).days <= 7),
+        "red_list_count": len(red_list(db, today, user_id=user.id)),
     }
 
 
@@ -3658,7 +3716,7 @@ def create_member(body: MemberCreateIn, db: Session = Depends(get_db), user: mod
     member = models.Member(
         user_id=user.id,
         code=next_member_code(db, user.id), name=name, phone=phone, plan=plan,
-        expiry_date=expiry,
+        expiry_date=expiry, joined_date=date.today(),
     )
     db.add(member)
     db.commit()

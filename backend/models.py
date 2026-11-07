@@ -116,6 +116,7 @@ class Member(Base):
     phone = Column(String(20), nullable=False)  # Indian mobile, digits only (10)
     plan = Column(String(20), nullable=False)  # Monthly | Quarterly | Yearly
     expiry_date = Column(Date, nullable=False)
+    joined_date = Column(Date, nullable=True)  # day the member joined (Daily Report)
 
     checkins = relationship("CheckIn", back_populates="member", cascade="all, delete-orphan")
     addon_subs = relationship("AddonSub", back_populates="member", cascade="all, delete-orphan")
