@@ -671,10 +671,19 @@ def last_visit(db: Session, member_id: int) -> date | None:
 
 
 def days_absent(db: Session, member: models.Member, today: date) -> int:
+    """Days since the member was last KNOWN present — measured from the
+    later of (last check-in, joined date). A member who joined today and
+    has never checked in is 0 days absent, NEVER a made-up number: the app
+    must not claim an absence it cannot measure (owner can still flag the
+    member manually). Before 2026-11-07 this returned a 9999 sentinel for
+    never-visited members, which instantly put brand-new members on the
+    Red List with '9999 Days' — wrong data on a public screen."""
     lv = last_visit(db, member.id)
-    if lv is None:
-        return 9999
-    return (today - lv).days
+    jd = getattr(member, "joined_date", None)
+    known = [d for d in (lv, jd) if d is not None]
+    if not known:
+        return 0
+    return max(0, (today - max(known)).days)
 
 
 def checked_in_today(db: Session, member_id: int, today: date) -> bool:
