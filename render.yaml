@@ -18,10 +18,11 @@ services:
       # (The demo account itself still works until you change it — see README "Going live".)
       - key: SHOW_DEMO_HINT
         value: "false"
-      # Seeds the demo owner + 48 demo members on first boot of an empty DB.
-      # Set to "false" once you run the gym with real data.
+      # PUBLIC SITE = REAL DATA ONLY (Farhan's order, 2026-11-07): no demo
+      # owner, no demo members, no fake numbers anywhere. Demo seeding stays
+      # available for local runs only by setting SEED_DEMO=true manually.
       - key: SEED_DEMO
-        value: "true"
+        value: "false"
       # Farhan's admin password for the /control page + admin API.
       # sync: false = Render asks YOU to type it at deploy; it is never
       # stored in this repo. While unset, /control does not exist.
