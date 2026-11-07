@@ -1,4 +1,53 @@
-# Do Gym
+# Do Gym — Gym Retention & Operations Platform
+
+**A deployed, multi-tenant SaaS web app that stops gym members from silently quitting.** Gym owners get automatic QR check-ins, a No-Show Red List of members who stopped coming, one-tap WhatsApp renewal reminders, and a daily business report — with zero register books and zero manual tracking.
+
+### 🔗 Live product
+**https://powerhouse-gym-76jh.onrender.com** — try it with the public demo account (shown on the login page): `owner@powerhousegym.in` / `Gym@2026`
+
+### Business impact
+- **Replaces a manual workflow the market charges ₹10,000–15,000 per gym to automate** (registration sheets + spreadsheet expiry tracking + hand-sent reminders) with a self-serve product at **₹1,599/month**.
+- **Retention, not just records:** the Red List surfaces members absent 10+ days *before* they churn, and renewals are flagged 7 days ahead — the two moments a gym actually loses money.
+- **Zero daily effort for the owner:** members check themselves in by scanning one wall QR; every count, list and report updates itself from the database.
+- **Multi-tenant by design:** every gym's data is fully isolated server-side (verified by a dedicated tenant-isolation test suite); one deployment serves every gym.
+- **Trust & safety built in:** subscription access is gated server-side (HTTP 402 until paid), activation requires the platform owner's in-person face verification with liveness, and every payment is audit-logged.
+
+### Highlights
+- 📋 **Daily Report** — check-ins today, cash collected today, new members, memberships expiring today / in 3 days, shareable to WhatsApp in one tap
+- 💬 **WhatsApp renewal reminders** — one tap on any due/expired member opens a ready-to-send reminder to that member's own phone (no API cost)
+- 📷 **Fully automatic QR check-in** — member scans once, the phone remembers their code, later scans check in by themselves; same-day duplicates are idempotent
+- 🚨 **No-Show Red List** — silent quitters ranked by days absent, with one-tap calling
+- 🔐 **Pay-first platform model** — owners subscribe (Standard ₹1,599/mo · Premium ₹1,899/mo); the app unlocks only after verified in-person collection + face scan, controlled from a hidden admin panel
+- ✅ **170+ automated tests** covering API, auth, payment gate, tenant isolation, face unlock, OTP and security headers
+
+### Tech stack
+| Layer | Technology |
+|---|---|
+| Backend | Python · FastAPI · SQLAlchemy ORM · SQLite (DATABASE_URL-swappable) |
+| Frontend | Single-page app (vanilla JS) served by the backend — no build step |
+| Auth & security | bcrypt, signed HTTP-only session cookies, email OTP (hashed, rate-limited), Google OAuth, CSP/security headers |
+| Payments | Server-computed amounts, audit log; UPI QR + in-person face-verified activation; Razorpay webhook engine built and dormant |
+| Face verification | face-api.js (vendored, no CDN), numeric templates only — never photos — with server-issued liveness challenges |
+| Testing / deploy | pytest suite · GitHub · Render (auto-deploy on push) |
+
+### Architecture
+```mermaid
+flowchart LR
+    M["Member's phone<br/>(scans wall QR)"] -->|public link, no login| CI["Public check-in page<br/>/checkin/&lt;gym-token&gt;"]
+    O["Gym owner<br/>(mobile browser)"] --> SPA["Owner SPA<br/>Home · Red List · Renewal · Plan"]
+    F["Platform owner<br/>(Farhan)"] --> CTL["Admin panel /control<br/>face-gated activation"]
+    CI --> API["FastAPI backend<br/>auth · OTP · payment gate (402)<br/>face unlock · audit log"]
+    SPA --> API
+    CTL --> API
+    API --> DB[("SQLite database<br/>per-gym tenant isolation")]
+    SPA -.->|one-tap reminder| WA["WhatsApp (wa.me)"]
+```
+
+*Detailed product manual below — screens, entry flow, subscription model, face unlock, OTP, QR self check-in, security notes, setup and deployment steps.*
+
+---
+
+# Product manual
 
 A complete gym-owner web app that stops members from silently quitting. The owner sees **who has stopped coming** (the No-Show Red List), checks members in by **QR code**, handles **renewals** before they lapse — all from one premium dashboard in a black & white + blue theme (Meta Muse style; the No-Show Red List keeps its red danger accents).
 
@@ -10,10 +59,10 @@ Built as a real full-stack website: **FastAPI + SQLite backend** with a secure o
 
 | Screen | What it does |
 |---|---|
-| **Home / Dashboard** | Live stats (Total Members, Checked In Today, Red List count, Renewals Due), member quick-find search with a status card (last visit, plan/expiry, Call / Check-In buttons), AUTO/MANUAL mode card, current-plan strip, and Today's Check-Ins. |
+| **Home / Dashboard** | Live stats (Total Members, Checked In Today, Red List count, Renewals Due), a **Today's Report** card (checked in today, ₹ collected today with payment count, new members today, memberships expiring today / in 3 days with one-tap WhatsApp Remind chips, and a **Share Report on WhatsApp** button), member quick-find search with a status card (last visit, plan/expiry, Call / Check-In buttons), AUTO/MANUAL mode card, current-plan strip, and Today's Check-Ins. |
 | **Screen 1 — No-Show Red List** | Members absent 10+ days, biggest absences first, with a red call button per member. Filter cycles 10+ / 15+ / 20+ days. In Manual mode the owner can flag or clear members by hand. |
 | **Screen 2 — QR Check-In** | The gym's QR poster — it encodes the gym's public check-in link, so members scan it with their **own phone** and check in by themselves (see *QR self check-in* below); plus owner-side check-in by member code (e.g. `PHG-001`) and a Simulate Scan button. Duplicate check-ins on the same day are politely rejected. |
-| **Screen 3 — Renewal** | Memberships expiring within 7 days and expired memberships, each with a Renew button (Manual mode: extend by a custom number of days), plus renewal history and "Renewed this month" revenue. |
+| **Screen 3 — Renewal** | Memberships expiring within 7 days and expired memberships, each with a Renew button and a green **💬 Remind** button (opens WhatsApp with a ready reminder message to that member's own phone; expired members get a win-back message), plus renewal history and "Renewed this month" revenue. |
 | **Plan & Billing** | The gym's current subscription, member usage, the payment panel (his UPI QR + plan/amount + the **Pay** face-scan button — see *How owners actually pay* below), payment status and last payment, and Settings (Gym & Owner Details). |
 
 **Entry flow for a new gym (the canonical order):** Continue with Google (or email signup) → **OTP** to that email → Gym & Owner Details → Choose a Plan → Payment screen → face-scan unlock **with an animation** → Dashboard. Two gates guard the app, enforced on the server: until the OTP is verified the account can reach only the OTP endpoints, and until the subscription payment is recorded every app API answers 402 — the owner can only finish the entry flow and pay (see *OTP verification* and *How owners actually pay* below).
