@@ -23,6 +23,13 @@ services:
       # available for local runs only by setting SEED_DEMO=true manually.
       - key: SEED_DEMO
         value: "false"
+      # PERMANENT DATABASE (Farhan's fix, 2026-11-08): a free hosted
+      # Postgres (Neon) connection string, set by Farhan in the Render
+      # dashboard — sync: false keeps the password OUT of this repo.
+      # While unset, the app falls back to the local SQLite file, which
+      # Render's free tier wipes on every deploy/restart.
+      - key: DATABASE_URL
+        sync: false
       # Farhan's admin password for the /control page + admin API.
       # sync: false = Render asks YOU to type it at deploy; it is never
       # stored in this repo. While unset, /control does not exist.

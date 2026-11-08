@@ -177,7 +177,7 @@ with engine.begin() as _conn:
             "ALTER TABLE users ADD COLUMN auth_provider VARCHAR(16) NOT NULL DEFAULT 'email'"
         ))
     if "created_at" not in _user_cols:
-        _conn.execute(sa_text("ALTER TABLE users ADD COLUMN created_at DATETIME"))
+        _conn.execute(sa_text("ALTER TABLE users ADD COLUMN created_at TIMESTAMP"))
         _conn.execute(
             sa_text("UPDATE users SET created_at = :now WHERE created_at IS NULL"),
             {"now": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")},
@@ -186,7 +186,7 @@ with engine.begin() as _conn:
         # Existing accounts predate the OTP stage — they stay verified
         # (default 0); only brand-new signups start pending.
         _conn.execute(sa_text(
-            "ALTER TABLE users ADD COLUMN otp_pending BOOLEAN NOT NULL DEFAULT 0"
+            "ALTER TABLE users ADD COLUMN otp_pending BOOLEAN NOT NULL DEFAULT FALSE"
         ))
     if "session_epoch" not in _user_cols:
         _conn.execute(sa_text(
